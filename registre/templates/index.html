@@ -1,10 +1,20 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Registre · LogIT{% endblock %}
+{% block account_admin %}{% endblock %}
 {% block content %}
 <div class="sillage">
+<nav class="sillage-nav" aria-label="Navigation principale">
+  <a class="button" href="{% url 'index' %}" aria-current="page">Registre</a>
+  <a class="button primary" href="{% url 'create' %}">+ Nouvelle intervention</a>
+  {% if user.is_staff %}<a class="button" href="{% url 'admin:index' %}">Administration</a>{% endif %}
+</nav>
+<div class="sillage-workspace">
 <div class="heading sillage-heading"><div><p class="eyebrow">Infrastructure et sécurité</p><h1>Registre des changements</h1></div>
-<a class="button primary" href="{% url 'create' %}">+ Nouvelle intervention</a></div>
+</div>
+<div class="layout">
+<section class="surface journal" aria-label="Interventions">
+<h2>Interventions <span class="count">{{ page.paginator.count }}</span></h2>
 <form class="filters surface" method="get" action="{% url 'index' %}" aria-label="Filtrer le registre">
 <div class="filter-row">
   <div>{{ filters.q.as_field_group }}</div>
@@ -21,9 +31,6 @@
   </div>
 </details>
 </form>
-<div class="layout">
-<section class="surface journal" aria-label="Interventions">
-<h2>Interventions <span class="count">{{ page.paginator.count }}</span></h2>
 {% for item in page %}
 {% ifchanged item.occurred_at|date:"Y-m-d" %}<p class="day-label">{{ item.occurred_at|date:"l j F Y" }}</p>{% endifchanged %}
 <a class="entry" href="{% url 'detail' item.pk %}?{% if query %}{{ query }}&amp;{% endif %}page={{ page.number }}#fiche"{% if selected.pk == item.pk %} aria-current="true"{% endif %}>
@@ -98,6 +105,7 @@
   <dl class="impact"><dt>Impact déclaré</dt><dd>{{ selected.impact }}</dd></dl>
 </section>
 </article>{% endif %}
+</div>
 </div>
 </div>
 {% if selected %}<script src="{% static 'sillage.js' %}" defer></script>{% endif %}
