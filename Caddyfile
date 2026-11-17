@@ -3,7 +3,7 @@
 }
 
 http://{$LOGIT_HOST} {
-    redir https://{$LOGIT_HOST}:6321{uri} 308
+    redir https://{$LOGIT_HOST}:{$LOGIT_HTTPS_PORT:6321}{uri} 308
 }
 
 {$LOGIT_HOST} {

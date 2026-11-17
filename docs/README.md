@@ -2,6 +2,22 @@
 
 Registre interne des changements d’infrastructure et de sécurité pour une petite équipe.
 
+## Installateur pour une base vide
+
+L’installateur cible Bash sous Linux ou WSL avec accès à Docker Compose en mode Linux. Il crée un dossier `logit` dans le répertoire courant et démarre l’instance sur `https://localhost:6321`. Le proxy redirige HTTP sur le port 6320. Le compte `admin-logit` reçoit un mot de passe temporaire affiché dans le terminal lors de sa création et doit le changer à la première connexion. Une relance avec les mêmes paramètres reprend l’installation sans recréer les comptes.
+
+Pour tester sur le même moteur que la préproduction, lancer depuis un autre dossier ou fixer `LOGIT_INSTALL_DIR`, puis définir `LOGIT_INSTALL_INSTANCE`, `LOGIT_INSTALL_HTTP_PORT` et `LOGIT_INSTALL_HTTPS_PORT` avec des valeurs distinctes. L’installateur refuse de réutiliser les ressources d’une installation existante lors de la création d’un nouveau dossier.
+
+### Préparer une version à distribuer
+
+Depuis la racine du dépôt, sous Bash, produire les fichiers statiques dans un répertoire de sortie neuf.
+
+```bash
+bash deploy/package.sh v1.0.0 <revision-testee> ../logit-release
+```
+
+Le paquet contient les fichiers versionnés. L’installateur épingle la version et vérifie l’empreinte SHA-256 du paquet. La racine du répertoire de sortie correspond aux chemins publics `/install.sh` et `/releases/v1.0.0/`. Le serveur de distribution sert uniquement ces fichiers en HTTPS. Git reste sur la machine qui produit la version. Pour la recette locale de la distribution, le quatrième argument de `deploy/package.sh` permet de fixer une origine HTTPS de préproduction.
+
 ## Préproduction sur Docker Desktop
 
 Depuis la racine, avec le moteur Linux de Docker Desktop actif et les ports 6320 et 6321 libres sur localhost, créer le fichier `.env` si nécessaire dans PowerShell.

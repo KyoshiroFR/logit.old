@@ -1,5 +1,6 @@
 .git
 .env
+.logit-install
 __pycache__
 *.sqlite3
 staticfiles
