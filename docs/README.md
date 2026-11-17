@@ -39,6 +39,8 @@ Dans un formulaire d’intervention, coller une capture avec Ctrl+V ou sélectio
 
 Dans Clair-obscur, les champs facultatifs « état avant » et « état après » alimentent la comparaison. L’onglet « Carte des impacts » relie le changement à son équipement, au service principal et aux services concernés sélectionnés dans la fiche. Le filtre Service couvre ces deux types de rattachement.
 
+Le registre affiche les cinq dernières interventions. Les recherches et filtres ouvrent `/historique/`, paginé à 20 résultats. Depuis une fiche ouverte dans ces résultats, « Retour aux résultats » conserve la page et les filtres.
+
 ```powershell
 docker compose exec app python manage.py check
 docker compose exec app python manage.py makemigrations --check --dry-run

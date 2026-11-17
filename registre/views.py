@@ -10,6 +10,7 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.views.decorators.cache import never_cache
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from PIL import Image, UnidentifiedImageError
 
 from .models import Attachment, Equipment, Intervention, Revision, Service
@@ -68,10 +69,7 @@ class Filters(forms.Form):
     end = forms.DateField(label="Jusqu’au", required=False, widget=forms.DateInput(attrs={"type": "date"}))
 
 
-@login_required
-def index(request, pk=None):
-    items = Intervention.objects.select_related("author", "equipment", "service")
-    filters = Filters(request.GET)
+def filter_interventions(items, filters):
     if filters.is_valid():
         data = filters.cleaned_data
         for key in ("equipment", "author"):
@@ -85,10 +83,54 @@ def index(request, pk=None):
             items = items.filter(occurred_at__date__gte=data["start"])
         if data["end"]:
             items = items.filter(occurred_at__date__lte=data["end"])
+    return items
+
+
+def history_query(params, include_page=True):
+    fields = (*Filters.base_fields, "page") if include_page else Filters.base_fields
+    query = params.copy()
+    for key in tuple(query):
+        if key not in fields or not query.get(key):
+            query.pop(key)
+    return query
+
+
+@login_required
+def history(request):
+    filters = Filters(request.GET)
+    items = Intervention.objects.select_related("author", "equipment", "service")
+    items = filter_interventions(items, filters) if filters.is_valid() else items.none()
+    params = history_query(request.GET, include_page=False)
     page = Paginator(items, 20).get_page(request.GET.get("page"))
-    selected = get_object_or_404(items, pk=pk) if pk is not None else next(iter(page), None)
-    query = request.GET.copy()
-    query.pop("page", None)
+    active_filters = []
+    for field in filters:
+        if params.get(field.name):
+            remaining = params.copy()
+            remaining.pop(field.name)
+            value = filters.cleaned_data.get(field.name, field.value())
+            active_filters.append((field.label, value, remaining.urlencode()))
+    detail_params = params.copy()
+    detail_params["page"] = page.number
+    detail_params["from"] = "history"
+    return render(request, "history.html", {
+        "filters": filters, "page": page, "query": params.urlencode(),
+        "active_filters": active_filters, "detail_query": detail_params.urlencode(),
+    })
+
+
+@login_required
+def index(request, pk=None):
+    items = Intervention.objects.select_related("author", "equipment", "service")
+    filters = Filters(request.GET)
+    params = history_query(request.GET)
+    if pk is None and params:
+        return redirect(f"{reverse('history')}?{params.urlencode()}")
+    recent = list(items[:5])
+    selected = get_object_or_404(items, pk=pk) if pk is not None else next(iter(recent), None)
+    from_history = request.GET.get("from") == "history"
+    detail_params = params.copy()
+    if from_history:
+        detail_params["from"] = "history"
     services = list(selected.impacted_services.all()) if selected else []
     if selected and selected.service and selected.service not in services:
         services.insert(0, selected.service)
@@ -99,7 +141,9 @@ def index(request, pk=None):
             (line[0], line[1:]) for line in islice(lines, 2, None) if not line.startswith("@@")
         ]
     return render(request, "index.html", {
-        "filters": filters, "page": page, "selected": selected, "query": query.urlencode(),
+        "filters": filters, "recent": recent, "selected": selected,
+        "from_history": from_history, "return_query": params.urlencode(),
+        "detail_query": detail_params.urlencode() if from_history else "",
         "revisions": selected.revisions.select_related("editor") if selected else [],
         "attachments": selected.attachments.defer("data").select_related("uploader") if selected else [],
         "impact_services": services,
@@ -144,7 +188,12 @@ def edit(request, pk=None):
                         intervention=item, editor=request.user, changes=changes,
                         reason=form.cleaned_data["correction_reason"],
                     )
-            return redirect("detail", pk=item.pk)
+            url = reverse("detail", kwargs={"pk": item.pk})
+            if request.GET.get("from") == "history":
+                params = history_query(request.GET)
+                params["from"] = "history"
+                url += "?" + params.urlencode()
+            return redirect(url)
     return render(request, "edit.html", {"form": form, "item": item})
 
 

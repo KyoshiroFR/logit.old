@@ -3,7 +3,7 @@
 {% block title %}{% if item.pk %}Corriger{% else %}Nouvelle intervention{% endif %} · LogIT{% endblock %}
 {% block content %}
 <div class="narrow">
-<a href="{% if item.pk %}{% url 'detail' item.pk %}{% else %}{% url 'index' %}{% endif %}">← Retour au registre</a>
+<a href="{% if item.pk %}{% url 'detail' item.pk %}{% if request.GET.from == 'history' %}?{{ request.GET.urlencode }}{% endif %}{% else %}{% url 'index' %}{% endif %}">← {% if item.pk %}Retour à la fiche{% else %}Retour au registre{% endif %}</a>
 <h1>{% if item.pk %}Corriger l’intervention{% else %}Nouvelle intervention{% endif %}</h1>
 <form method="post" enctype="multipart/form-data" class="surface form">{% csrf_token %}{{ form.as_div }}
 <ul id="pending-captures" class="pending-captures"></ul>

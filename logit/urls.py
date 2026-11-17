@@ -6,6 +6,7 @@ from registre import views
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("historique/", views.history, name="history"),
     path("interventions/nouvelle/", views.edit, name="create"),
     path("interventions/<int:pk>/", views.index, name="detail"),
     path("interventions/<int:pk>/corriger/", views.edit, name="edit"),

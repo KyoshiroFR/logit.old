@@ -13,6 +13,36 @@ body:not(:has(.clair)) main > .narrow > a, body:not(:has(.clair)) .eyebrow { col
 .narrow .form label { color: #3d2649; }
 .narrow .form .primary { background: #701ad0; }
 select[multiple] { min-height: 115px; }
+.history-page {
+  --history-columns: minmax(0, 2.1fr) minmax(0, 1fr) repeat(3, minmax(0, 1fr));
+  color: #2f1938;
+  overflow-wrap: anywhere;
+}
+.history-page .primary { background: #701ad0; color: #fff; }
+.history-heading { margin: 8px 0 18px; }
+.history-heading h1 { font-size: clamp(1.6rem, 4vw, 2.45rem); }
+.history-filters { padding: 14px; border-radius: 20px; background: #f3e6ef; margin-bottom: 18px; }
+.history-filter-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr)); gap: 10px; }
+.history-filter-fields label { color: #4b3354; }
+.history-filters .actions { margin-top: 12px; }
+.history-chips { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0 0 18px; padding: 0; }
+.history-chips li { min-width: 0; max-width: 100%; }
+.history-chips a { display: inline-block; padding: 6px 12px; border-radius: 999px; background: #eddcf1; }
+.history-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.history-columns, .history-row { display: grid; grid-template-columns: var(--history-columns); align-items: center; gap: 12px; padding: 10px 12px; }
+.history-columns { color: #604e63; font-size: .83rem; font-weight: 650; }
+.history-row { text-decoration: none; color: inherit; background: #f7edf3; border-radius: 12px; }
+.history-row:hover { background: #efddf0; }
+.history-row strong { color: #551d79; }
+.history-pagination { margin-top: 16px; justify-content: center; }
+.history-open, .history-return { background: #f3e6ef; }
+.history-return { margin-bottom: 14px; }
+@media(max-width: 650px) {
+ .history-columns { display: none; }
+ .history-row { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 10px; row-gap: 4px; }
+ .history-row strong { grid-column: 1 / -1; }
+ .history-row :is(time,span) { font-size: .85rem; }
+}
 body:has(.clair) main { padding: clamp(12px, 3vw, 48px) clamp(10px, 2vw, 30px) 22px; }
 .clair {
   --plum: #2f1938;

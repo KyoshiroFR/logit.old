@@ -24,12 +24,11 @@
     {% if user.is_staff %}<a class="button" href="{% url 'admin:index' %}"><span aria-hidden="true">⚙</span> Administration</a>{% endif %}
   </nav>
   <section class="surface journal" aria-label="Interventions">
-    <h1>Historique</h1>
-    <form class="sillage-filter" id="sillage-filters" method="get" action="{% url 'index' %}" aria-label="Filtrer le registre">
+    <h1>Interventions récentes</h1>
+    <form class="sillage-filter" id="sillage-filters" method="get" action="{% url 'history' %}" aria-label="Filtrer le registre">
       <div class="sillage-filter-row">
         <label class="visually-hidden" for="{{ filters.equipment.id_for_label }}">Équipement</label>{{ filters.equipment }}
         <button type="submit">Filtrer</button>
-        {% if query %}<a href="{% url 'index' %}">Réinitialiser</a>{% endif %}
       </div>
       {{ filters.q.errors }}{{ filters.equipment.errors }}
       <details class="advanced"{% if filters.service.value or filters.author.value or filters.start.value or filters.end.value or filters.errors %} open{% endif %}>
@@ -41,10 +40,10 @@
       </details>
     </form>
     <div class="sillage-events">
-      {% for item in page %}
+      {% for item in recent %}
       <div class="sillage-event">
         <time class="sillage-date" datetime="{{ item.occurred_at|date:'c' }}"><strong>{{ item.occurred_at|date:"d" }}</strong><span>{{ item.occurred_at|date:"M" }}</span></time>
-        <a class="entry" href="{% url 'detail' item.pk %}?{% if query %}{{ query }}&amp;{% endif %}page={{ page.number }}#fiche"{% if selected.pk == item.pk %} aria-current="true"{% endif %}>
+        <a class="entry" href="{% url 'detail' item.pk %}#fiche"{% if selected.pk == item.pk %} aria-current="true"{% endif %}>
           <span class="sillage-mark" aria-hidden="true">▤</span>
           <span class="sillage-entry-copy"><strong>{{ item.title }}</strong><span class="muted">{{ item.equipment }} · {{ item.author }}</span>
           <span class="muted">#{{ item.pk }} · {{ item.occurred_at|date:"d M Y · H:i" }}</span></span>
@@ -52,14 +51,11 @@
       </div>
       {% empty %}<p class="muted">Aucune intervention trouvée.</p>{% endfor %}
     </div>
-    {% if page.has_other_pages %}<nav class="actions" aria-label="Pagination">
-      {% if page.has_previous %}<a href="{% url 'index' %}?{{ query }}&amp;page={{ page.previous_page_number }}">Précédente</a>{% endif %}
-      <span>{{ page.number }} / {{ page.paginator.num_pages }}</span>
-      {% if page.has_next %}<a href="{% url 'index' %}?{{ query }}&amp;page={{ page.next_page_number }}">Suivante</a>{% endif %}
-    </nav>{% endif %}
+    <a class="button history-open" href="{% url 'history' %}">Voir tout l’historique</a>
   </section>
 
   {% if selected %}<article class="surface fiche" id="fiche">
+    {% if from_history %}<a class="button history-return" href="{% url 'history' %}{% if return_query %}?{{ return_query }}{% endif %}">← Retour aux résultats</a>{% endif %}
     <header class="sillage-record">
       <span class="sillage-mark" aria-hidden="true">▤</span>
       <div><h2>{{ selected.title }}</h2><p class="muted">#{{ selected.pk }} · {{ selected.occurred_at|date:"d M Y à H:i" }}</p></div>
@@ -67,7 +63,7 @@
     </header>
     <nav class="fiche-tabs" aria-label="Sections de la fiche" hidden>
       <button type="button" data-panel="fiche-detail" aria-controls="fiche-detail" aria-pressed="true">Fiche</button>
-      <button type="button" data-panel="fiche-history" aria-controls="fiche-history" aria-pressed="false">Historique</button>
+      <button type="button" data-panel="fiche-history" aria-controls="fiche-history" aria-pressed="false">Corrections</button>
       <button type="button" data-panel="fiche-impact" aria-controls="fiche-impact" aria-pressed="false">Carte des impacts</button>
     </nav>
     <section id="fiche-detail" aria-label="Détails de l’intervention">
@@ -124,12 +120,12 @@
         </dl>
         <div class="actions sillage-record-actions">
           <a class="button" href="#retour-arriere">Voir le retour arrière</a>
-          <a class="button primary" href="{% url 'edit' selected.pk %}">Corriger</a>
+          <a class="button primary" href="{% url 'edit' selected.pk %}{% if detail_query %}?{{ detail_query }}{% endif %}">Corriger</a>
         </div>
       </section>
     </section>
     <section id="fiche-history" aria-labelledby="history-title">
-      <h3 id="history-title">Historique des corrections</h3>
+      <h3 id="history-title">Corrections de cette fiche</h3>
       {% for rev in revisions %}
       <details><summary>{{ rev.corrected_at|date:"d M Y à H:i:s" }} · {{ rev.editor }} · {{ rev.reason }}</summary>
         <dl>{% for field, values in rev.changes.items %}

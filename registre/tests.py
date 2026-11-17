@@ -49,13 +49,14 @@ class RegistreTests(TestCase):
         register = self.client.get("/", secure=True)
         for field in ("q", "equipment", "service", "author", "start", "end"):
             self.assertContains(register, f'id="id_{field}"')
-        self.assertNotContains(self.client.get("/", {"equipment": dns.pk}, secure=True), "Règle VPN")
-        self.assertContains(self.client.get("/", {"equipment": firewall.pk}, secure=True), "Règle VPN")
-        filtered = self.client.get("/", {"service": intranet.pk}, secure=True)
+        self.assertNotContains(self.client.get("/historique/", {"equipment": dns.pk}, secure=True), "Règle VPN")
+        self.assertContains(self.client.get("/historique/", {"equipment": firewall.pk}, secure=True), "Règle VPN")
+        filtered = self.client.get("/historique/", {"service": intranet.pk}, secure=True)
         self.assertEqual(filtered.context["page"].paginator.count, 1)
-        self.assertEqual(filtered.context["impact_services"], [intranet, vpn])
-        self.assertContains(filtered, 'class="removed"')
-        self.assertContains(filtered, 'class="changed"')
+        detail = self.client.get(f"/interventions/{item.pk}/", secure=True)
+        self.assertEqual(detail.context["impact_services"], [intranet, vpn])
+        self.assertContains(detail, 'class="removed"')
+        self.assertContains(detail, 'class="changed"')
 
         fields["impact"] = "Accès prestataire fermé"
         fields["correction_reason"] = "Vérification terminée"
@@ -65,6 +66,32 @@ class RegistreTests(TestCase):
         self.assertEqual(revision.editor, editor)
         self.assertEqual(revision.changes["impact"], {"before": "À vérifier", "after": fields["impact"]})
         self.assertContains(self.client.get(f"/interventions/{item.pk}/", secure=True), "À vérifier")
+
+    def test_historique_filtre_pagine_et_retour(self):
+        member = get_user_model().objects.create_user("lea")
+        firewall = Equipment.objects.create(name="Pare-feu")
+        self.client.force_login(member)
+        Intervention.objects.bulk_create([
+            Intervention(title=f"VPN {index:02}", equipment=firewall, author=member)
+            for index in range(50)
+        ])
+        Intervention.objects.create(title="DNS", equipment=firewall, author=member)
+        filters = {"q": "VPN", "equipment": firewall.pk}
+        history = "/historique/"
+        for number, count in ((1, 20), (2, 20), (3, 10)):
+            response = self.client.get(history, {**filters, "page": number}, secure=True)
+            page = response.context["page"]
+            self.assertEqual(page.paginator.count, 50)
+            self.assertEqual(len(page.object_list), count)
+            self.assertEqual(page.number, number)
+        second = self.client.get(history, {**filters, "page": 2}, secure=True)
+        self.assertEqual(second.context["page"].object_list[0].title, "VPN 29")
+        item = second.context["page"].object_list[0]
+        self.assertContains(second, f'href="/historique/?equipment={firewall.pk}"')
+        detail = self.client.get(f"/interventions/{item.pk}/", {**filters, "page": 2, "from": "history"}, secure=True)
+        self.assertContains(detail, f'href="/historique/?q=VPN&amp;equipment={firewall.pk}&amp;page=2"')
+        self.assertContains(detail, "Retour aux résultats")
+        self.assertEqual(len(self.client.get("/", secure=True).context["recent"]), 5)
 
     def test_captures_restent_privees_et_tracables(self):
         member = get_user_model().objects.create_user("lea")
