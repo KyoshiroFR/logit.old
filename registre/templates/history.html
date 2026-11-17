@@ -3,7 +3,7 @@
 {% block title %}Historique des interventions · LogIT{% endblock %}
 {% block content %}
 <section class="surface history-page">
-  <a href="{% url 'index' %}" class="history-home">← Registre</a>
+  <a href="{% url 'index' %}" class="button history-home">← Registre</a>
   <div class="heading history-heading">
     <h1>Historique des interventions</h1>
     <a class="button primary" href="{% url 'create' %}">+ Nouvelle intervention</a>
@@ -20,7 +20,7 @@
     {{ filters.non_field_errors }}
     <div class="actions">
       <button type="submit">Appliquer les filtres</button>
-      {% if active_filters %}<a href="{% url 'history' %}">Réinitialiser tous les filtres</a>{% endif %}
+      {% if active_filters %}<a class="button" href="{% url 'history' %}">Réinitialiser tous les filtres</a>{% endif %}
     </div>
   </form>
   {% if active_filters %}
