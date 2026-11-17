@@ -4,12 +4,46 @@ from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
+from django.http import HttpResponse
+from django.views.decorators.cache import never_cache
 from django.shortcuts import get_object_or_404, redirect, render
+from PIL import Image, UnidentifiedImageError
 
-from .models import Equipment, Intervention, Revision, Service
+from .models import Attachment, Equipment, Intervention, Revision, Service
+
+
+class MultipleImageInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class AttachmentField(forms.FileField):
+    def clean(self, files, initial=None):
+        images = []
+        allowed_types = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
+        for file in files or []:
+            upload = super().clean(file, initial)
+            if upload.size > 5 * 1024 * 1024:
+                raise forms.ValidationError("Chaque image doit peser au plus 5 Mo.")
+            try:
+                with Image.open(upload, formats=tuple(allowed_types)) as image:
+                    if image.width * image.height > 25_000_000:
+                        raise forms.ValidationError("Une capture dépasse 25 mégapixels.")
+                    content_type = allowed_types[image.format]
+                    image.verify()
+            except (UnidentifiedImageError, Image.DecompressionBombError, OSError, SyntaxError, ValueError) as error:
+                raise forms.ValidationError("Choisis une image PNG, JPEG ou WebP valide.") from error
+            upload.seek(0)
+            images.append(Attachment(name=upload.name, content_type=content_type, data=upload.read()))
+        return images
 
 
 class InterventionForm(forms.ModelForm):
+    attachments = AttachmentField(
+        required=False, label="Captures",
+        help_text="Colle avec Ctrl+V ou choisis un fichier. PNG, JPEG et WebP, 5 Mo par image, 10 images par fiche.",
+        widget=MultipleImageInput(attrs={"accept": "image/png,image/jpeg,image/webp"}),
+    )
+
     class Meta:
         model = Intervention
         exclude = ["author"]
@@ -51,6 +85,7 @@ def index(request, pk=None):
     return render(request, "index.html", {
         "filters": filters, "page": page, "selected": selected, "query": query.urlencode(),
         "revisions": selected.revisions.select_related("editor") if selected else [],
+        "attachments": selected.attachments.defer("data").select_related("uploader") if selected else [],
     })
 
 
@@ -59,15 +94,33 @@ def edit(request, pk=None):
     with transaction.atomic():
         item = get_object_or_404(Intervention, pk=pk) if pk is not None else Intervention(author=request.user)
         form_type = CorrectionForm if pk is not None else InterventionForm
-        form = form_type(request.POST if request.method == "POST" else None, instance=item)
+        form = form_type(
+            request.POST if request.method == "POST" else None,
+            request.FILES if request.method == "POST" else None,
+            instance=item,
+        )
         before = item.snapshot() if pk is not None else {}
         if request.method == "POST" and form.is_valid():
+            images = form.cleaned_data["attachments"]
+            existing_count = item.attachments.count() if item.pk else 0
+            if existing_count + len(images) > 10:
+                form.add_error("attachments", "Une fiche peut contenir au plus 10 images.")
+                return render(request, "edit.html", {"form": form, "item": item})
             item = form.save()
+            for image in images:
+                image.intervention = item
+                image.uploader = request.user
+            Attachment.objects.bulk_create(images)
             if pk is not None:
                 changes = {
                     field: {"before": before[field], "after": value}
                     for field, value in item.snapshot().items() if before[field] != value
                 }
+                if images:
+                    changes["captures ajoutées"] = {
+                        "before": "",
+                        "after": ", ".join(image.name for image in images),
+                    }
                 if changes:
                     Revision.objects.create(
                         intervention=item, editor=request.user, changes=changes,
@@ -75,3 +128,12 @@ def edit(request, pk=None):
                     )
             return redirect("detail", pk=item.pk)
     return render(request, "edit.html", {"form": form, "item": item})
+
+
+@login_required
+@never_cache
+def attachment(request, pk):
+    image = get_object_or_404(Attachment, pk=pk)
+    response = HttpResponse(image.data, content_type=image.content_type)
+    response.headers["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    return response

@@ -9,6 +9,7 @@ urlpatterns = [
     path("interventions/nouvelle/", views.edit, name="create"),
     path("interventions/<int:pk>/", views.index, name="detail"),
     path("interventions/<int:pk>/corriger/", views.edit, name="edit"),
+    path("captures/<int:pk>/", views.attachment, name="attachment"),
     path("connexion/", auth.LoginView.as_view(template_name="login.html"), name="login"),
     path("deconnexion/", auth.LogoutView.as_view(), name="logout"),
     path("administration/", admin.site.urls),

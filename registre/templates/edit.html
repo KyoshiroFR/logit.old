@@ -1,10 +1,14 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{% if item.pk %}Corriger{% else %}Nouvelle intervention{% endif %} · LogIT{% endblock %}
 {% block content %}
 <div class="narrow">
 <a href="{% if item.pk %}{% url 'detail' item.pk %}{% else %}{% url 'index' %}{% endif %}">← Retour au registre</a>
 <h1>{% if item.pk %}Corriger l’intervention{% else %}Nouvelle intervention{% endif %}</h1>
-<form method="post" class="surface form">{% csrf_token %}{{ form.as_div }}
+<form method="post" enctype="multipart/form-data" class="surface form">{% csrf_token %}{{ form.as_div }}
+<ul id="pending-captures" class="pending-captures"></ul>
+<p id="capture-status" class="muted" role="status"></p>
 <div class="actions"><button class="primary">Enregistrer</button></div>
 </form></div>
+<script src="{% static 'captures.js' %}" defer></script>
 {% endblock %}

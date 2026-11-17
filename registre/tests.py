@@ -1,7 +1,11 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase
+from io import BytesIO
 
-from .models import Equipment, Intervention, Revision
+from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import TestCase
+from PIL import Image
+
+from .models import Attachment, Equipment, Intervention, Revision
 
 
 class RegistreTests(TestCase):
@@ -36,6 +40,9 @@ class RegistreTests(TestCase):
 
         self.client.force_login(editor)
         self.assertEqual(self.client.get("/administration/", secure=True).status_code, 302)
+        register = self.client.get("/", secure=True)
+        for field in ("q", "equipment", "service", "author", "start", "end"):
+            self.assertContains(register, f'id="id_{field}"')
         self.assertNotContains(self.client.get("/", {"equipment": dns.pk}, secure=True), "Règle VPN")
         self.assertContains(self.client.get("/", {"equipment": firewall.pk}, secure=True), "Règle VPN")
 
@@ -47,3 +54,43 @@ class RegistreTests(TestCase):
         self.assertEqual(revision.editor, editor)
         self.assertEqual(revision.changes["impact"], {"before": "À vérifier", "after": fields["impact"]})
         self.assertContains(self.client.get(f"/interventions/{item.pk}/", secure=True), "À vérifier")
+
+    def test_captures_restent_privees_et_tracables(self):
+        member = get_user_model().objects.create_user("lea")
+        self.client.force_login(member)
+        equipment = Equipment.objects.create(name="Pare-feu")
+        item = Intervention.objects.create(
+            title="Règle VPN", equipment=equipment, author=member,
+            change="Règle modifiée", reason="Maintenance", impact="Interne",
+            verification="Connexion testée", rollback="Rétablir la règle",
+        )
+        fields = {
+            "title": item.title, "equipment": equipment.pk,
+            "occurred_at": "2026-11-17T14:05",
+            "change": item.change, "reason": item.reason, "impact": item.impact,
+            "verification": item.verification, "rollback": item.rollback,
+            "correction_reason": "Ajout de la preuve",
+        }
+        edit_url = f"/interventions/{item.pk}/corriger/"
+        fields["attachments"] = SimpleUploadedFile("faux.png", b"not an image", content_type="image/png")
+        self.assertContains(self.client.post(edit_url, fields, secure=True), "Choisis une image")
+        self.assertFalse(Attachment.objects.exists())
+
+        capture = BytesIO()
+        Image.new("RGB", (4, 4)).save(capture, format="PNG")
+        fields["attachments"] = [
+            SimpleUploadedFile(name, capture.getvalue(), content_type="image/png")
+            for name in ("capture.png", "capture-2.png")
+        ]
+        self.assertEqual(self.client.post(edit_url, fields, secure=True).status_code, 302)
+        self.assertEqual(Attachment.objects.count(), 2)
+        image = Attachment.objects.first()
+        self.assertEqual(image.uploader, member)
+        self.assertIn("capture.png", Revision.objects.get().changes["captures ajoutées"]["after"])
+        self.assertContains(self.client.get(f"/interventions/{item.pk}/", secure=True), "capture.png")
+        url = f"/captures/{image.pk}/"
+        response = self.client.get(url, secure=True)
+        self.assertEqual(response["Content-Type"], "image/png")
+        self.assertEqual(response.content, capture.getvalue())
+        self.client.logout()
+        self.assertEqual(self.client.get(url, secure=True).status_code, 302)

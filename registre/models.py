@@ -61,3 +61,15 @@ class Revision(models.Model):
 
     class Meta:
         ordering = ["-corrected_at", "-pk"]
+
+
+class Attachment(models.Model):
+    intervention = models.ForeignKey(Intervention, on_delete=models.PROTECT, related_name="attachments")
+    uploader = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    name = models.CharField(max_length=255)
+    content_type = models.CharField(max_length=20)
+    data = models.BinaryField()
+
+    class Meta:
+        ordering = ["pk"]
