@@ -1,49 +1,50 @@
 :root {
-    color-scheme: dark;
+    color-scheme: light;
     --font-family-primary: "Segoe UI", system-ui, sans-serif;
-    --primary: #26403a;
-    --secondary: #253c37;
-    --accent: #a4ebd1;
-    --primary-fg: #edf5f2;
-    --body-fg: #edf5f2;
-    --body-bg: #101619;
-    --body-quiet-color: #aebebd;
-    --body-medium-color: #d4e2df;
-    --body-loud-color: #fff;
-    --header-color: #a4ebd1;
-    --header-branding-color: #edf5f2;
-    --header-bg: #141e20;
-    --header-link-color: #edf5f2;
-    --breadcrumbs-fg: #aebebd;
-    --breadcrumbs-link-fg: #a4ebd1;
-    --breadcrumbs-bg: #192225;
-    --link-fg: #a4ebd1;
-    --link-hover-color: #c7f7e6;
-    --link-selected-fg: #c7f7e6;
-    --hairline-color: #2b393b;
-    --border-color: #354445;
-    --error-fg: #ffb5b5;
-    --message-success-bg: #253c37;
-    --message-warning-bg: #453b25;
-    --message-error-bg: #482d31;
-    --darkened-bg: #192225;
-    --selected-bg: #253c37;
-    --selected-row: #263932;
-    --button-fg: #edf5f2;
-    --button-bg: #253c37;
-    --button-hover-bg: #344d47;
-    --default-button-bg: #a4ebd1;
-    --default-button-hover-bg: #c7f7e6;
-    --close-button-bg: #354445;
-    --close-button-hover-bg: #445758;
+    --primary: #e3f1e9;
+    --secondary: #e0eee6;
+    --accent: #23624e;
+    --primary-fg: #192c26;
+    --body-fg: #192c26;
+    --body-bg: #f0f5f2;
+    --body-quiet-color: #50655c;
+    --body-medium-color: #334a40;
+    --body-loud-color: #11291f;
+    --header-color: #23624e;
+    --header-branding-color: #192c26;
+    --header-bg: #fbfdfb;
+    --header-link-color: #192c26;
+    --breadcrumbs-fg: #50655c;
+    --breadcrumbs-link-fg: #23624e;
+    --breadcrumbs-bg: #fbfdfb;
+    --link-fg: #23624e;
+    --link-hover-color: #164b39;
+    --link-selected-fg: #164b39;
+    --hairline-color: #e0ebe4;
+    --border-color: #d0ded6;
+    --error-fg: #9b2637;
+    --message-success-bg: #e0eee6;
+    --message-warning-bg: #fff2d3;
+    --message-error-bg: #fce5e7;
+    --darkened-bg: #fbfdfb;
+    --selected-bg: #e0eee6;
+    --selected-row: #e0eee6;
+    --button-fg: #192c26;
+    --button-bg: #e0eee6;
+    --button-hover-bg: #d4e7db;
+    --default-button-bg: #23624e;
+    --default-button-hover-bg: #164b39;
+    --close-button-bg: #d0ded6;
+    --close-button-hover-bg: #c0d7ca;
     --delete-button-bg: #9f3d47;
     --delete-button-hover-bg: #b54954;
-    --object-tools-bg: #253c37;
-    --object-tools-hover-bg: #344d47;
+    --object-tools-bg: #e0eee6;
+    --object-tools-hover-bg: #d4e7db;
 }
 
-body { background: radial-gradient(ellipse at 18% 0%, #203a36, transparent 540px), var(--body-bg); }
+body { background: radial-gradient(ellipse at 18% 0%, #dcece2, transparent 540px), var(--body-bg); }
 #header { padding-block: 14px; }
+div.breadcrumbs { border-radius: 0 0 20px 20px; }
 #site-name { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; }
 #site-name .logit-brand { font-size: 1.55rem; letter-spacing: -.055em; font-weight: 800; }
 .logit-brand span { color: var(--accent); }
@@ -61,6 +62,7 @@ body { background: radial-gradient(ellipse at 18% 0%, #203a36, transparent 540px
     overflow-wrap: anywhere;
 }
 #nav-sidebar { background: var(--body-bg); }
+#toggle-nav-sidebar { border-radius: 0 12px 12px 0; }
 #nav-sidebar .current-app .section { color: var(--accent); }
 #nav-sidebar .current-model { background: var(--selected-bg); }
 #content input:not([type="checkbox"], [type="radio"], [type="hidden"]),
@@ -68,8 +70,9 @@ body { background: radial-gradient(ellipse at 18% 0%, #203a36, transparent 540px
 #content .button, #content input[type="submit"], #content .object-tools a, #content .deletelink {
     border-radius: 999px;
 }
-#content .button.default, #content input[type="submit"].default { color: #112a24; }
+#content .button.default, #content input[type="submit"].default { color: #ffffff; }
+#content .deletelink, #content .deletelink:visited { color: #ffffff; }
 #content-related, #changelist-filter, .submit-row, #toolbar { border-radius: 17px; }
 #content-related, #changelist-filter { overflow: hidden; }
-body.login #container { border-radius: 22px; overflow: hidden; }
+body.login #container { border-radius: 24px; overflow: hidden; box-shadow: 0 5px 20px #214d3714; }
 :where(a, button, input, textarea, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
