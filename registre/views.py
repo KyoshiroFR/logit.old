@@ -93,7 +93,7 @@ class CorrectionForm(InterventionForm):
 
 
 class Filters(forms.Form):
-    q = forms.CharField(label="Recherche", required=False)
+    q = forms.CharField(label="Recherche", required=False, max_length=200)
     equipment = forms.ModelChoiceField(
         label="Équipement", queryset=Equipment.objects.all(), required=False, empty_label="Tous les équipements",
     )
@@ -112,7 +112,12 @@ def filter_interventions(items, filters):
         if data["service"]:
             items = items.filter(Q(service=data["service"]) | Q(impacted_services=data["service"])).distinct()
         if data["q"]:
-            items = items.filter(Q(title__icontains=data["q"]) | Q(change__icontains=data["q"]))
+            term = data["q"]
+            items = items.filter(
+                Q(title__icontains=term) | Q(change__icontains=term) | Q(reference__icontains=term)
+                | Q(equipment__name__icontains=term) | Q(service__name__icontains=term)
+                | Q(impacted_services__name__icontains=term)
+            ).distinct()
         if data["start"]:
             items = items.filter(occurred_at__date__gte=data["start"])
         if data["end"]:

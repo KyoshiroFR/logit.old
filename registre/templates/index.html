@@ -9,7 +9,7 @@
     <div class="sillage-toolbar">
       <label class="sillage-search">
         <span class="visually-hidden">Rechercher dans le registre</span>
-        <input id="{{ filters.q.id_for_label }}" name="q" type="search" form="sillage-filters" value="{{ filters.q.value|default_if_none:'' }}" placeholder="Rechercher dans le registre…">
+        <input id="{{ filters.q.id_for_label }}" name="q" type="search" maxlength="200" form="sillage-filters" value="{{ filters.q.value|default_if_none:'' }}" placeholder="Titre, référence, équipement ou service…">
       </label>
       <kbd class="search-shortcut" aria-hidden="true" hidden>Ctrl + K</kbd>
       <details class="sillage-account">

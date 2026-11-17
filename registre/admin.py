@@ -2,6 +2,8 @@ from django import forms
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import GroupAdmin, UserAdmin
+from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -12,8 +14,44 @@ from .models import Equipment, Service
 admin.site.site_header = "Administration LogIT"
 
 
+class RetainedAdmin:
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class AccessManagementAdmin:
+    def has_module_permission(self, request):
+        return request.user.is_superuser and super().has_module_permission(request)
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser and super().has_view_permission(request, obj)
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser and super().has_add_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser and super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser and super().has_delete_permission(request, obj)
+
+
+user_model = get_user_model()
+admin.site.unregister([user_model, Group])
+
+
+@admin.register(user_model)
+class LogITUserAdmin(RetainedAdmin, AccessManagementAdmin, UserAdmin):
+    pass
+
+
+@admin.register(Group)
+class LogITGroupAdmin(AccessManagementAdmin, GroupAdmin):
+    pass
+
+
 @admin.register(Equipment, Service)
-class ReferenceAdmin(admin.ModelAdmin):
+class ReferenceAdmin(RetainedAdmin, admin.ModelAdmin):
     list_display = ("name", "status")
     list_filter = ("archived",)
     search_fields = ("name",)

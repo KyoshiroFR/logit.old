@@ -1,6 +1,7 @@
 from io import BytesIO
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.contrib.admin.models import CHANGE, LogEntry
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -14,6 +15,52 @@ from .views import configuration_lines
 
 
 class RegistreTests(TestCase):
+    def test_administration_preserve_les_references_et_les_auteurs(self):
+        users = get_user_model()
+        admin = users.objects.create_superuser("admin")
+        staff = users.objects.create_user("staff", is_staff=True)
+        author = users.objects.create_user("auteur")
+        equipment = Equipment.objects.create(name="Pare-feu historique")
+        service = Service.objects.create(name="VPN satellite")
+        item = Intervention.objects.create(title="Intervention historique", equipment=equipment, author=author)
+        item.impacted_services.add(service)
+        event = LogEntry.objects.create(user=author, object_repr=service.name, action_flag=CHANGE)
+        self.client.force_login(admin)
+        for path in (
+            f"auth/user/{author.pk}/delete/",
+            f"registre/equipment/{equipment.pk}/delete/",
+            f"registre/service/{service.pk}/delete/",
+        ):
+            self.assertEqual(self.client.post("/administration/" + path, {"post": "yes"}, secure=True).status_code, 403)
+        self.assertTrue(item.impacted_services.filter(pk=service.pk).exists())
+        author.is_active = False
+        author.save(update_fields=["is_active"])
+        self.assertTrue(LogEntry.objects.filter(pk=event.pk, user=author).exists())
+        self.assertContains(self.client.get("/administration/journal/", {"author": author.pk}, secure=True), service.name)
+        self.assertContains(self.client.get(f"/interventions/{item.pk}/", secure=True), author.username)
+        staff.user_permissions.add(*Permission.objects.filter(codename__in=["change_user", "change_group", "view_service"]))
+        self.client.force_login(staff)
+        self.assertEqual(self.client.get("/administration/auth/user/", secure=True).status_code, 403)
+        self.assertEqual(self.client.get("/administration/auth/group/", secure=True).status_code, 403)
+        self.assertEqual(self.client.get("/administration/registre/service/", secure=True).status_code, 200)
+        self.assertEqual(self.client.get("/administration/journal/", secure=True).status_code, 403)
+        self.client.force_login(author)
+        self.assertEqual(self.client.get("/historique/", secure=True).status_code, 302)
+
+    def test_recherche_reference_equipement_et_services_sans_doublons(self):
+        member = get_user_model().objects.create_user("membre")
+        equipment = Equipment.objects.create(name="Pare-feu test")
+        services = [Service.objects.create(name=name) for name in ("VPN principal", "VPN nomades", "VPN partenaires")]
+        item = Intervention.objects.create(
+            title="Ajustement réseau", equipment=equipment, author=member,
+            reference="FW-9087", service=services[0],
+        )
+        item.impacted_services.set(services[1:])
+        self.client.force_login(member)
+        for term in ("FW-9087", "Pare-feu test", "VPN principal", "VPN nomades", "VPN"):
+            response = self.client.get("/historique/", {"q": term}, secure=True)
+            self.assertEqual(list(response.context["page"]), [item])
+
     def test_archivage_reactivation_et_journal_admin(self):
         users = get_user_model()
         admin = users.objects.create_superuser("admin")

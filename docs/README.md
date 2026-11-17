@@ -43,6 +43,9 @@ Les miniatures sont affichées avant enregistrement. Retirer une miniature écar
 Dans Clair-obscur, les champs facultatifs « état avant » et « état après » alimentent la comparaison. L’onglet « Carte des impacts » relie le changement à son équipement, au service principal et aux services concernés sélectionnés dans la fiche. Le filtre Service couvre ces deux types de rattachement.
 
 Le registre affiche les cinq dernières interventions. Les recherches et filtres ouvrent `/historique/`, paginé à 20 résultats. Depuis une fiche ouverte dans ces résultats, « Retour aux résultats » conserve la page et les filtres.
+La recherche couvre le titre, la modification, la référence technique, le nom de l’équipement et les noms des services principal et concernés, y compris lorsque ces référentiels ont été archivés.
+
+Depuis l’administration, désactiver les comptes et archiver les équipements et services pour les retirer de l’usage courant. Les écrans de gestion bloquent leur suppression et conservent les liens historiques et le journal. Seuls les superutilisateurs gèrent les comptes et groupes et consultent le journal complet. Un membre du personnel doit recevoir les droits explicites pour gérer les référentiels.
 
 Ctrl+K (Cmd+K sur Mac) place le curseur dans la recherche. Les flèches gauche et droite permettent de changer d’onglet de fiche. « Vue agrandie » ouvre la carte dans une fenêtre qui se ferme avec Échap.
 
@@ -65,5 +68,7 @@ docker compose exec app rm /tmp/logit-backup.sqlite3
 ```
 
 Placer la copie dans le système de sauvegarde interne hors de l’hôte. Tester la restauration dans un environnement isolé en substituant la copie sur le volume d’essai, application arrêtée, puis en vérifiant l’intégrité SQLite, les fiches et leurs corrections après redémarrage. Les sauvegardes contiennent des données internes et des comptes.
+
+Pour la recette locale, monter `logit-preprod-sql` en lecture seule dans un conteneur sans réseau et utiliser un volume Docker temporaire pour la copie. Ajouter une fiche fictive, une correction, une capture et une entrée admin sur la copie de travail uniquement. Sauvegarder cette base, restaurer la sauvegarde dans un nouveau fichier et vérifier `PRAGMA integrity_check` et `PRAGMA foreign_key_check`. Avec l’image LogIT testée, vérifier l’ouverture de la fiche, l’accès protégé à la capture, la correction et le journal filtré sur la base restaurée. Supprimer le volume temporaire à la fin de la recette.
 
 Le fichier Compose livré cible la préproduction locale. Pour raccorder un reverse proxy existant, préparer une configuration de production distincte avec un nom d’hôte, un secret, un réseau et un volume propres à cet environnement. Le proxy doit écraser `X-Forwarded-Proto` pour établir le schéma de la requête. Reprendre l’image d’application validée par son identifiant ou digest et tester le raccordement avant bascule.
