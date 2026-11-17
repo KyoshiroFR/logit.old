@@ -18,6 +18,7 @@
   <nav class="sillage-nav" aria-label="Navigation principale">
     <a class="button sillage-nav-link" href="{% url 'index' %}" aria-current="page"><span aria-hidden="true">▤</span> Registre</a>
     <a class="button sillage-nav-link" href="{% url 'history' %}"><span aria-hidden="true">◷</span> Historique</a>
+    <a class="button sillage-nav-link" href="{% url 'history' %}?author={{ user.pk }}"><span aria-hidden="true">▧</span> Mes interventions</a>
     <a class="button sillage-nav-link" href="{% url 'create' %}"><span aria-hidden="true">＋</span> Nouvelle fiche</a>
   </nav>
   <section class="surface journal" aria-label="Interventions">

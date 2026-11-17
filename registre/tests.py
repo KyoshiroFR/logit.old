@@ -173,6 +173,7 @@ class RegistreTests(TestCase):
         )
         item.impacted_services.set(services[1:])
         self.client.force_login(member)
+        self.assertContains(self.client.get("/", secure=True), f'href="/historique/?author={member.pk}"')
         for term in ("FW-9087", "Pare-feu test", "VPN principal", "VPN nomades", "VPN"):
             response = self.client.get("/historique/", {"q": term}, secure=True)
             self.assertEqual(list(response.context["page"]), [item])
