@@ -123,3 +123,15 @@ if (map) {
     });
     expand.hidden = false;
 }
+const profileMenu = document.querySelector(".account-menu");
+if (profileMenu) {
+    document.addEventListener("click", event => {
+        if (profileMenu.open && !profileMenu.contains(event.target)) profileMenu.open = false;
+    });
+    profileMenu.addEventListener("keydown", event => {
+        if (event.key === "Escape" && profileMenu.open) {
+            profileMenu.open = false;
+            profileMenu.querySelector("summary").focus();
+        }
+    });
+}

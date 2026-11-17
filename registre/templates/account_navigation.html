@@ -1,0 +1,4 @@
+<nav class="account-page-nav" aria-label="Réglages du compte">
+  <a class="button" href="{% url 'account' %}"{% if not security_page and not form %} aria-current="page"{% endif %}>Mon compte</a>
+  <a class="button" href="{% url 'account_security' %}"{% if security_page or form %} aria-current="page"{% endif %}>Sécurité</a>
+</nav>

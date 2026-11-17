@@ -6,11 +6,13 @@ import django_otp
 import qrcode
 from django import forms
 from django.contrib.auth import get_user_model, login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import SetPasswordForm
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordChangeView
+from django.contrib.messages import success
 from django.db import transaction
 from django.shortcuts import redirect, render
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils.crypto import constant_time_compare
 from django.utils.http import urlencode, url_has_allowed_host_and_scheme
 from django.views.decorators.cache import never_cache
@@ -92,6 +94,33 @@ class AccountSecurityMiddleware:
 def admin_login(request):
     target = request.GET.get("next", reverse("admin:index"))
     return redirect(reverse("login") + "?" + urlencode({"next": target}))
+
+
+@never_cache
+@login_required
+def account(request):
+    return render(request, "account.html", {"title": "Mon compte"})
+
+
+@never_cache
+@login_required
+def account_security(request):
+    policy = policy_for(request.user)
+    return render(request, "account.html", {
+        "title": "Sécurité", "security_page": True,
+        "totp_required": bool(policy and policy.totp_required),
+        "totp_configured": TOTPDevice.objects.filter(user=request.user, confirmed=True).exists(),
+    })
+
+
+class AccountPasswordChangeView(PasswordChangeView):
+    template_name = "account_password.html"
+    success_url = reverse_lazy("account_security")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        success(self.request, "Ton mot de passe a été modifié.")
+        return response
 
 
 class FirstPasswordForm(SetPasswordForm):

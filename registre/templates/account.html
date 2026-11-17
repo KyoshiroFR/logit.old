@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · LogIT{% endblock %}
+{% block content %}
+<section class="narrow account-page">
+  <h1>{{ title }}</h1>
+  {% include "account_navigation.html" %}
+  <div class="surface">
+  {% if security_page %}
+    {% for message in messages %}<p class="account-notice" role="status">{{ message }}</p>{% endfor %}
+    <div class="heading"><h2>Mot de passe</h2><a class="button primary" href="{% url 'account_password' %}">Changer le mot de passe</a></div>
+    <hr>
+    <h2>Authentification à deux facteurs</h2>
+    <dl class="account-facts">
+      <div><dt>Politique du compte</dt><dd>{{ totp_required|yesno:"TOTP obligatoire,TOTP non exigé" }}</dd></div>
+      <div><dt>Appareil TOTP</dt><dd>{{ totp_configured|yesno:"Configuré,Non configuré" }}</dd></div>
+    </dl>
+  {% else %}
+    <dl class="account-facts">
+      <div><dt>Identifiant</dt><dd>{{ user.get_username }}</dd></div>
+      <div><dt>Nom</dt><dd>{{ user.get_full_name|default:"Non renseigné" }}</dd></div>
+      <div><dt>Adresse e-mail</dt><dd>{{ user.email|default:"Non renseignée" }}</dd></div>
+      <div><dt>Accès</dt><dd>{% if user.is_superuser %}Superutilisateur{% elif user.is_staff %}Personnel habilité{% else %}Membre{% endif %}</dd></div>
+    </dl>
+  {% endif %}
+  </div>
+</section>
+{% endblock %}

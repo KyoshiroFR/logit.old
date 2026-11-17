@@ -12,11 +12,7 @@
         <input id="{{ filters.q.id_for_label }}" name="q" type="search" maxlength="200" form="sillage-filters" value="{{ filters.q.value|default_if_none:'' }}" placeholder="Titre, référence, équipement ou service…">
       </label>
       <kbd class="search-shortcut" aria-hidden="true" hidden>Ctrl + K</kbd>
-      <details class="sillage-account">
-        <summary aria-label="Compte {{ user.get_username }}">{{ user.get_username|slice:":2"|upper }}</summary>
-        <div><p>{{ user.get_username }}</p>
-        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Se déconnecter</button></form></div>
-      </details>
+      {% include "account_menu.html" %}
     </div>
   </header>
   <nav class="sillage-nav" aria-label="Navigation principale">
