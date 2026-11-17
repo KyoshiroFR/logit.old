@@ -1,0 +1,75 @@
+:root {
+    color-scheme: dark;
+    --font-family-primary: "Segoe UI", system-ui, sans-serif;
+    --primary: #26403a;
+    --secondary: #253c37;
+    --accent: #a4ebd1;
+    --primary-fg: #edf5f2;
+    --body-fg: #edf5f2;
+    --body-bg: #101619;
+    --body-quiet-color: #aebebd;
+    --body-medium-color: #d4e2df;
+    --body-loud-color: #fff;
+    --header-color: #a4ebd1;
+    --header-branding-color: #edf5f2;
+    --header-bg: #141e20;
+    --header-link-color: #edf5f2;
+    --breadcrumbs-fg: #aebebd;
+    --breadcrumbs-link-fg: #a4ebd1;
+    --breadcrumbs-bg: #192225;
+    --link-fg: #a4ebd1;
+    --link-hover-color: #c7f7e6;
+    --link-selected-fg: #c7f7e6;
+    --hairline-color: #2b393b;
+    --border-color: #354445;
+    --error-fg: #ffb5b5;
+    --message-success-bg: #253c37;
+    --message-warning-bg: #453b25;
+    --message-error-bg: #482d31;
+    --darkened-bg: #192225;
+    --selected-bg: #253c37;
+    --selected-row: #263932;
+    --button-fg: #edf5f2;
+    --button-bg: #253c37;
+    --button-hover-bg: #344d47;
+    --default-button-bg: #a4ebd1;
+    --default-button-hover-bg: #c7f7e6;
+    --close-button-bg: #354445;
+    --close-button-hover-bg: #445758;
+    --delete-button-bg: #9f3d47;
+    --delete-button-hover-bg: #b54954;
+    --object-tools-bg: #253c37;
+    --object-tools-hover-bg: #344d47;
+}
+
+body { background: radial-gradient(ellipse at 18% 0%, #203a36, transparent 540px), var(--body-bg); }
+#header { padding-block: 14px; }
+#site-name { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; }
+#site-name .logit-brand { font-size: 1.55rem; letter-spacing: -.055em; font-weight: 800; }
+.logit-brand span { color: var(--accent); }
+.logit-admin-label { font-size: .9rem; color: var(--body-quiet-color); }
+.theme-toggle { display: none; }
+#content h1 { color: var(--body-fg); letter-spacing: -.035em; font-weight: 700; }
+#content .module, #nav-sidebar .module {
+    background: var(--darkened-bg);
+    border-radius: 17px;
+    overflow: hidden;
+}
+#content .module caption, #content .module h2, #nav-sidebar .module caption { padding: 10px 14px; }
+#content .module td, #content .module th { padding-block: 10px; }
+#content .module td, #content .module th, #nav-sidebar .module td, #nav-sidebar .module th {
+    overflow-wrap: anywhere;
+}
+#nav-sidebar { background: var(--body-bg); }
+#nav-sidebar .current-app .section { color: var(--accent); }
+#nav-sidebar .current-model { background: var(--selected-bg); }
+#content input:not([type="checkbox"], [type="radio"], [type="hidden"]),
+#content textarea, #content select, #nav-filter { border-radius: 10px; }
+#content .button, #content input[type="submit"], #content .object-tools a, #content .deletelink {
+    border-radius: 999px;
+}
+#content .button.default, #content input[type="submit"].default { color: #112a24; }
+#content-related, #changelist-filter, .submit-row, #toolbar { border-radius: 17px; }
+#content-related, #changelist-filter { overflow: hidden; }
+body.login #container { border-radius: 22px; overflow: hidden; }
+:where(a, button, input, textarea, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

@@ -23,6 +23,7 @@ MIDDLEWARE = [
 TEMPLATES = [{
     "BACKEND": "django.template.backends.django.DjangoTemplates",
     "APP_DIRS": True,
+    "DIRS": [os.path.join(os.path.dirname(__file__), "templates")],
     "OPTIONS": {"context_processors": [
         "django.template.context_processors.request",
         "django.contrib.auth.context_processors.auth",
