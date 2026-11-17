@@ -1,3 +1,6 @@
+from difflib import unified_diff
+from itertools import islice
+
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model
@@ -71,9 +74,11 @@ def index(request, pk=None):
     filters = Filters(request.GET)
     if filters.is_valid():
         data = filters.cleaned_data
-        for key in ("equipment", "service", "author"):
+        for key in ("equipment", "author"):
             if data[key]:
                 items = items.filter(**{key: data[key]})
+        if data["service"]:
+            items = items.filter(Q(service=data["service"]) | Q(impacted_services=data["service"])).distinct()
         if data["q"]:
             items = items.filter(Q(title__icontains=data["q"]) | Q(change__icontains=data["q"]))
         if data["start"]:
@@ -84,10 +89,21 @@ def index(request, pk=None):
     selected = get_object_or_404(items, pk=pk) if pk is not None else next(iter(page), None)
     query = request.GET.copy()
     query.pop("page", None)
+    services = list(selected.impacted_services.all()) if selected else []
+    if selected and selected.service and selected.service not in services:
+        services.insert(0, selected.service)
+    configuration_diff = []
+    if selected and selected.before_state and selected.after_state:
+        lines = unified_diff(selected.before_state.splitlines(), selected.after_state.splitlines(), lineterm="")
+        configuration_diff = [
+            (line[0], line[1:]) for line in islice(lines, 2, None) if not line.startswith("@@")
+        ]
     return render(request, "index.html", {
         "filters": filters, "page": page, "selected": selected, "query": query.urlencode(),
         "revisions": selected.revisions.select_related("editor") if selected else [],
         "attachments": selected.attachments.defer("data").select_related("uploader") if selected else [],
+        "impact_services": services,
+        "configuration_diff": configuration_diff,
     })
 
 

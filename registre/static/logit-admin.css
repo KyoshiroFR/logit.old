@@ -1,48 +1,48 @@
 :root {
     color-scheme: light;
     --font-family-primary: "Segoe UI", system-ui, sans-serif;
-    --primary: #e3f1e9;
-    --secondary: #e0eee6;
-    --accent: #23624e;
-    --primary-fg: #192c26;
-    --body-fg: #192c26;
-    --body-bg: #f0f5f2;
-    --body-quiet-color: #50655c;
-    --body-medium-color: #334a40;
-    --body-loud-color: #11291f;
-    --header-color: #23624e;
-    --header-branding-color: #192c26;
-    --header-bg: #fbfdfb;
-    --header-link-color: #192c26;
-    --breadcrumbs-fg: #50655c;
-    --breadcrumbs-link-fg: #23624e;
-    --breadcrumbs-bg: #fbfdfb;
-    --link-fg: #23624e;
-    --link-hover-color: #164b39;
-    --link-selected-fg: #164b39;
-    --hairline-color: #e0ebe4;
-    --border-color: #d0ded6;
+    --primary: #f0e0ee;
+    --secondary: #ead8ed;
+    --accent: #7020ab;
+    --primary-fg: #301a38;
+    --body-fg: #301a38;
+    --body-bg: #f6e9ef;
+    --body-quiet-color: #614d65;
+    --body-medium-color: #4b3450;
+    --body-loud-color: #31173b;
+    --header-color: #7020ab;
+    --header-branding-color: #301a38;
+    --header-bg: #fcf3f5;
+    --header-link-color: #301a38;
+    --breadcrumbs-fg: #614d65;
+    --breadcrumbs-link-fg: #7020ab;
+    --breadcrumbs-bg: #fcf3f5;
+    --link-fg: #7020ab;
+    --link-hover-color: #541780;
+    --link-selected-fg: #541780;
+    --hairline-color: #eadce8;
+    --border-color: #deccdf;
     --error-fg: #9b2637;
-    --message-success-bg: #e0eee6;
+    --message-success-bg: #ead8ed;
     --message-warning-bg: #fff2d3;
     --message-error-bg: #fce5e7;
-    --darkened-bg: #fbfdfb;
-    --selected-bg: #e0eee6;
-    --selected-row: #e0eee6;
-    --button-fg: #192c26;
-    --button-bg: #e0eee6;
-    --button-hover-bg: #d4e7db;
-    --default-button-bg: #23624e;
-    --default-button-hover-bg: #164b39;
-    --close-button-bg: #d0ded6;
-    --close-button-hover-bg: #c0d7ca;
+    --darkened-bg: #fcf3f5;
+    --selected-bg: #ead8ed;
+    --selected-row: #ead8ed;
+    --button-fg: #301a38;
+    --button-bg: #ead8ed;
+    --button-hover-bg: #e0c7ea;
+    --default-button-bg: #7020ab;
+    --default-button-hover-bg: #541780;
+    --close-button-bg: #deccdf;
+    --close-button-hover-bg: #d8bce2;
     --delete-button-bg: #9f3d47;
     --delete-button-hover-bg: #b54954;
-    --object-tools-bg: #e0eee6;
-    --object-tools-hover-bg: #d4e7db;
+    --object-tools-bg: #ead8ed;
+    --object-tools-hover-bg: #e0c7ea;
 }
 
-body { background: radial-gradient(ellipse at 18% 0%, #dcece2, transparent 540px), var(--body-bg); }
+body { background: radial-gradient(ellipse at 18% 0%, #edd9ef, transparent 540px), var(--body-bg); }
 #header { padding-block: 14px; }
 div.breadcrumbs { border-radius: 0 0 20px 20px; }
 #site-name { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; }

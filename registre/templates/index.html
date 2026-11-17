@@ -3,11 +3,10 @@
 {% block title %}Registre · LogIT{% endblock %}
 {% block header %}{% endblock %}
 {% block content %}
-<div class="sillage sillage-reference">
+<div class="sillage sillage-reference clair">
   <header class="sillage-top">
     <a class="sillage-wordmark" href="{% url 'index' %}">LogIT</a>
     <div class="sillage-toolbar">
-      <div class="sillage-context"><strong>Registre</strong><span>Infrastructures et sécurité</span></div>
       <label class="sillage-search">
         <span class="visually-hidden">Rechercher dans le registre</span>
         <input id="{{ filters.q.id_for_label }}" name="q" type="search" form="sillage-filters" value="{{ filters.q.value|default_if_none:'' }}" placeholder="Rechercher dans le registre…">
@@ -25,8 +24,7 @@
     {% if user.is_staff %}<a class="button" href="{% url 'admin:index' %}"><span aria-hidden="true">⚙</span> Administration</a>{% endif %}
   </nav>
   <section class="surface journal" aria-label="Interventions">
-    <h1>Registre</h1>
-    <p class="muted">Journal des changements d’infrastructure et de sécurité</p>
+    <h1>Historique</h1>
     <form class="sillage-filter" id="sillage-filters" method="get" action="{% url 'index' %}" aria-label="Filtrer le registre">
       <div class="sillage-filter-row">
         <label class="visually-hidden" for="{{ filters.equipment.id_for_label }}">Équipement</label>{{ filters.equipment }}
@@ -73,6 +71,23 @@
       <button type="button" data-panel="fiche-impact" aria-controls="fiche-impact" aria-pressed="false">Carte des impacts</button>
     </nav>
     <section id="fiche-detail" aria-label="Détails de l’intervention">
+      {% with revision=revisions.0 %}
+      <div class="clair-diff" aria-label="Comparaison avant et après">
+        <section><h3>Avant</h3><div class="clair-code">
+          {% if selected.before_state %}<code>{{ selected.before_state }}</code>{% else %}{% for field, values in revision.changes.items %}
+          <div><span>{{ field|capfirst }}</span><code>{{ values.before|default:"—" }}</code></div>
+          {% empty %}<p>État antérieur non renseigné.</p>{% endfor %}{% endif %}
+        </div></section>
+        <section><h3>Après</h3><div class="clair-code">
+          {% if configuration_diff %}
+            <pre class="configuration-diff">{% for marker, line in configuration_diff %}<code{% if marker == "+" %} class="changed"{% elif marker == "-" %} class="removed"{% endif %}>{{ marker }} {{ line }}</code>{% endfor %}</pre>
+          {% elif selected.after_state %}<code>{{ selected.after_state }}</code>{% else %}{% for field, values in revision.changes.items %}
+          <div class="changed"><span>{{ field|capfirst }}</span><code>{{ values.after|default:"—" }}</code></div>
+          {% empty %}<div><span>Modification</span><code>{{ selected.change }}</code></div>{% endfor %}{% endif %}
+        </div></section>
+      </div>
+      {% endwith %}
+      <dl class="clair-impact"><dt>Impact</dt><dd>{{ selected.impact }}</dd></dl>
       <div class="fiche-overview">
         <div class="sillage-summary">
           <dl class="sillage-metadata">
@@ -125,14 +140,35 @@
     </section>
     <section id="fiche-impact" aria-labelledby="map-title">
       <h3 id="map-title">Carte des impacts</h3>
-      <ol class="impact-map">
-        <li><span>Intervention</span><strong>{{ selected.title }}</strong></li>
-        <li><span>Équipement</span><strong>{{ selected.equipment }}</strong></li>
-        <li><span>Service</span><strong>{{ selected.service|default:"Aucun service renseigné" }}</strong></li>
-      </ol>
-      <dl class="impact"><dt>Impact déclaré</dt><dd>{{ selected.impact }}</dd></dl>
+      <div class="clair-map">
+      <div class="prisme-graph{% if impact_services %} has-services{% endif %}">
+        <div class="prisme-node"><span>Intervention</span><strong>{{ selected.title }}</strong></div>
+        <div class="prisme-node prisme-equipment"><span>Équipement</span><strong>{{ selected.equipment }}</strong></div>
+        {% if impact_services %}
+          <section class="prisme-services" aria-label="Services concernés">
+            <h4>Services concernés</h4>
+            <ul>{% for service in impact_services %}
+              <li class="prisme-node">{{ service }}</li>
+            {% endfor %}</ul>
+          </section>
+        {% endif %}
+      </div>
+      <p class="muted">{% if impact_services %}Liaisons déclarées dans la fiche{% else %}Aucun service renseigné pour cette intervention.{% endif %}</p>
+      <dl class="clair-impact"><dt>Impact déclaré</dt><dd>{{ selected.impact }}</dd></dl>
+      </div>
     </section>
   </article>{% endif %}
+  {% if selected %}
+  <aside class="clair-inspection surface" aria-label="Inspection">
+    <h2>⌕ &nbsp; Inspection</h2>
+    <dl>
+      <div><dt>Équipement</dt><dd>{{ selected.equipment }}</dd></div>
+      <div><dt>Service</dt><dd>{{ selected.service|default:"Non renseigné" }}</dd></div>
+      <div><dt>Impact</dt><dd>{{ selected.impact }}</dd></div>
+    </dl>
+    <a class="button primary" href="#retour-arriere" data-show-detail>↶ &nbsp; Retour arrière</a>
+  </aside>
+  {% endif %}
 </div>
 {% if selected %}<script src="{% static 'sillage.js' %}" defer></script>{% endif %}
 {% endblock %}

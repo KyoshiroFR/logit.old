@@ -14,3 +14,6 @@ for (const button of sectionButtons) {
 }
 selectSection(sectionButtons[0]);
 sectionNavigation.hidden = false;
+document.querySelector("[data-show-detail]")?.addEventListener("click", () => {
+    selectSection(sectionButtons[0]);
+});

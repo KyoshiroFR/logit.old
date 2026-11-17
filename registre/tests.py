@@ -5,7 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from PIL import Image
 
-from .models import Attachment, Equipment, Intervention, Revision
+from .models import Attachment, Equipment, Intervention, Revision, Service
 
 
 class RegistreTests(TestCase):
@@ -15,6 +15,8 @@ class RegistreTests(TestCase):
         editor = user_model.objects.create_user("lea")
         firewall = Equipment.objects.create(name="Pare-feu")
         dns = Equipment.objects.create(name="DNS")
+        vpn = Service.objects.create(name="VPN")
+        intranet = Service.objects.create(name="Intranet")
 
         self.assertRedirects(
             self.client.get("/", secure=True), "/connexion/?next=/", fetch_redirect_response=False,
@@ -32,6 +34,10 @@ class RegistreTests(TestCase):
             "impact": "À vérifier",
             "rollback": "Restaurer l’ancienne règle",
             "verification": "Connexion interne testée",
+            "before_state": "État de test initial",
+            "after_state": "État de test final",
+            "service": vpn.pk,
+            "impacted_services": [vpn.pk, intranet.pk],
         }
         response = self.client.post("/interventions/nouvelle/", fields, secure=True)
         item = Intervention.objects.get()
@@ -45,6 +51,11 @@ class RegistreTests(TestCase):
             self.assertContains(register, f'id="id_{field}"')
         self.assertNotContains(self.client.get("/", {"equipment": dns.pk}, secure=True), "Règle VPN")
         self.assertContains(self.client.get("/", {"equipment": firewall.pk}, secure=True), "Règle VPN")
+        filtered = self.client.get("/", {"service": intranet.pk}, secure=True)
+        self.assertEqual(filtered.context["page"].paginator.count, 1)
+        self.assertEqual(filtered.context["impact_services"], [intranet, vpn])
+        self.assertContains(filtered, 'class="removed"')
+        self.assertContains(filtered, 'class="changed"')
 
         fields["impact"] = "Accès prestataire fermé"
         fields["correction_reason"] = "Vérification terminée"

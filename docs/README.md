@@ -37,6 +37,8 @@ Dans l’administration, créer les comptes nominatifs et les équipements avant
 
 Dans un formulaire d’intervention, coller une capture avec Ctrl+V ou sélectionner des fichiers. Les images PNG, JPEG et WebP font au plus 5 Mo chacune, avec un maximum de 10 par fiche. Elles sont consultables après connexion et stockées dans la base SQLite, donc incluses dans sa sauvegarde.
 
+Dans Clair-obscur, les champs facultatifs « état avant » et « état après » alimentent la comparaison. L’onglet « Carte des impacts » relie le changement à son équipement, au service principal et aux services concernés sélectionnés dans la fiche. Le filtre Service couvre ces deux types de rattachement.
+
 ```powershell
 docker compose exec app python manage.py check
 docker compose exec app python manage.py makemigrations --check --dry-run
