@@ -1,3 +1,11 @@
+{
+    auto_https disable_redirects
+}
+
+http://{$LOGIT_HOST} {
+    redir https://{$LOGIT_HOST}:6321{uri} 308
+}
+
 {$LOGIT_HOST} {
     tls internal
     reverse_proxy app:8000

@@ -4,7 +4,7 @@ Registre interne des changements d’infrastructure et de sécurité pour une pe
 
 ## Préproduction sur Docker Desktop
 
-Depuis la racine, avec le moteur Linux de Docker Desktop actif et les ports 80 et 443 libres sur localhost, créer le fichier `.env` si nécessaire dans PowerShell.
+Depuis la racine, avec le moteur Linux de Docker Desktop actif et les ports 6320 et 6321 libres sur localhost, créer le fichier `.env` si nécessaire dans PowerShell.
 
 ```powershell
 if (-not (Test-Path .env)) {
@@ -16,8 +16,8 @@ docker compose --profile proxy ps
 docker compose exec app python manage.py createsuperuser
 ```
 
-- Application à l’adresse https://localhost et administration à l’adresse https://localhost/administration/
-- `logit-preprod-proxy` publie HTTP et HTTPS sur `127.0.0.1`. Caddy redirige HTTP vers HTTPS.
+- Application à l’adresse https://localhost:6321 et administration à l’adresse https://localhost:6321/administration/
+- `logit-preprod-proxy` publie les ports 6320 (HTTP) et 6321 (HTTPS) sur `127.0.0.1`. Caddy redirige HTTP vers HTTPS en conservant le chemin et les paramètres.
 - `logit-preprod-app` exécute Django et Gunicorn sur le réseau `logit-preprod-net`.
 - `logit-preprod-sql` conserve la base SQLite, dont les comptes et les corrections.
 - `logit-preprod-tls` conserve les données de l’autorité de certification privée de Caddy.
@@ -26,7 +26,7 @@ Pour valider le certificat sans modifier la confiance Windows, exporter uniqueme
 
 ```powershell
 docker cp logit-preprod-proxy:/data/caddy/pki/authorities/local/root.crt logit-local-ca.crt
-curl.exe --cacert logit-local-ca.crt https://localhost/connexion/
+curl.exe --cacert logit-local-ca.crt --ssl-revoke-best-effort https://localhost:6321/connexion/
 ```
 
 Pour une utilisation dans le navigateur, faire approuver ce certificat d’autorité dans le magasin de confiance utilisé par le navigateur. La clé privée reste dans le volume Caddy.

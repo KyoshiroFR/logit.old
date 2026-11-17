@@ -20,8 +20,8 @@ services:
     environment:
       LOGIT_HOST: ${LOGIT_HOST:-localhost}
     ports:
-      - "${LOGIT_BIND_IP:-127.0.0.1}:80:80"
-      - "${LOGIT_BIND_IP:-127.0.0.1}:443:443"
+      - "${LOGIT_BIND_IP:-127.0.0.1}:6320:80"
+      - "${LOGIT_BIND_IP:-127.0.0.1}:6321:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - tls:/data
