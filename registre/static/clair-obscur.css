@@ -17,6 +17,48 @@ body:not(:has(.clair)) main > .narrow > a, body:not(:has(.clair)) .eyebrow { col
 .narrow .form label { color: #3d2649; }
 .narrow .form .primary { background: #701ad0; }
 .totp-qr { display: block; max-width: 100%; height: auto; margin: 0 auto 14px; border-radius: 12px; }
+body:has(.auth-stage) main { padding-block: 0; }
+.auth-stage {
+  display: grid;
+  place-items: center;
+  min-height: calc(100svh - 72px);
+  padding-block: 28px;
+}
+.auth-card {
+  width: min(100%, 460px);
+  padding: clamp(18px, 5vw, 34px);
+  color: #321839;
+  background: linear-gradient(145deg, #fff8f7, #f3e4ef);
+  border: 1px solid #e9d3e7;
+  border-radius: 30px;
+  box-shadow: 0 24px 55px #1d102d65;
+}
+.auth-card h1 { margin: 12px 0 20px; text-align: center; font-size: clamp(1.55rem, 5vw, 2.1rem); }
+.auth-lock {
+  position: relative; display: block; margin-inline: auto;
+  width: 54px; height: 54px; border-radius: 18px;
+  background: linear-gradient(145deg, #edddf3, #ddbee7);
+  box-shadow: 0 4px 12px #61296c2b;
+}
+.auth-lock::before {
+  content: ""; position: absolute; inset: 13px 20px auto; height: 14px;
+  border: 2px solid #6c24a6; border-radius: 9px 9px 0 0;
+}
+.auth-lock::after {
+  content: ""; position: absolute; inset: 24px 17px auto; height: 16px;
+  border-radius: 4px; background: #6c24a6;
+}
+.auth-card label { color: #3d2649; font-weight: 600; }
+.auth-card .helptext { overflow-wrap: anywhere; }
+.auth-card input { background: #f4e7ef; box-shadow: inset 0 2px 5px #5b2b631c; }
+.auth-card input::-ms-reveal { display: none; }
+.password-control { display: flex; align-items: stretch; gap: 6px; }
+.password-control input { flex: 1; min-width: 0; }
+.password-control button { flex: none; padding-inline: 10px; font-size: .875rem; background: #ebd7ee; color: #4d235d; }
+.password-control button:hover { background: #e3c7e9; }
+.auth-actions { display: grid; gap: 10px; text-align: center; }
+.auth-actions .primary { background: #7020ab; color: white; }
+.auth-actions .primary:hover { background: #581782; }
 .intervention-form { max-width: 1680px; }
 .intervention-form .form-back {
   display: inline-flex;

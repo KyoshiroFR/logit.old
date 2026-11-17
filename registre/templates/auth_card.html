@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="auth-stage">
+  <section class="auth-card" aria-labelledby="auth-title">
+    <span class="auth-lock" aria-hidden="true"></span>
+    <h1 id="auth-title">{% block auth_title %}{% endblock %}</h1>
+    {% block auth_content %}{% endblock %}
+  </section>
+</div>
+<script src="{% static 'password-visibility.js' %}" defer></script>
+{% endblock %}

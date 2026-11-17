@@ -1,16 +1,14 @@
-{% extends "base.html" %}
+{% extends "auth_card.html" %}
 {% block title %}{{ title }} · LogIT{% endblock %}
-{% block content %}
-<div class="narrow login">
-  <h1>{{ title }}</h1>
-  <form method="post" class="surface form">
+{% block auth_title %}{{ title }}{% endblock %}
+{% block auth_content %}
+  <form method="post" class="form">
     {% csrf_token %}
     {% if qr %}
       <p>Scanne le QR code avec ton application d’authentification, puis saisis le code affiché.</p>
       <img class="totp-qr" src="data:image/png;base64,{{ qr }}" width="224" height="224" alt="QR code d’enrôlement LogIT">
     {% endif %}
     {{ form.as_div }}
-    <div class="actions"><button class="primary">Continuer</button><a href="{% url 'login' %}">Revenir à la connexion</a></div>
+    <div class="auth-actions"><button class="primary">Continuer</button><a href="{% url 'login' %}">Revenir à la connexion</a></div>
   </form>
-</div>
 {% endblock %}

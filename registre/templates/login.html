@@ -1,10 +1,9 @@
-{% extends "base.html" %}
+{% extends "auth_card.html" %}
 {% block title %}Connexion · LogIT{% endblock %}
-{% block content %}
-<div class="narrow login">
-<p class="eyebrow">Infrastructure et sécurité</p><h1>Connexion</h1>
-<form method="post" class="surface form">{% csrf_token %}{{ form.as_div }}
+{% block auth_title %}Connexion{% endblock %}
+{% block auth_content %}
+<form method="post" class="form">{% csrf_token %}{{ form.as_div }}
 <input type="hidden" name="next" value="{{ next }}">
-<div class="actions"><button class="primary">Se connecter</button></div>
-</form></div>
+<div class="auth-actions"><button class="primary">Se connecter</button></div>
+</form>
 {% endblock %}
