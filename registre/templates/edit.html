@@ -7,13 +7,13 @@
 <h1>{% if item.pk %}Corriger l’intervention{% else %}Nouvelle intervention{% endif %}</h1>
 <form method="post" enctype="multipart/form-data" class="surface form">{% csrf_token %}
 {{ form.non_field_errors }}
-<fieldset><legend>Intervention</legend>
+<fieldset class="form-side"><legend>Intervention</legend>
   <div class="form-pair"><div>{{ form.title.as_field_group }}</div><div>{{ form.occurred_at.as_field_group }}</div></div>
   <div class="form-pair"><div>{{ form.equipment.as_field_group }}</div><div>{{ form.service.as_field_group }}</div></div>
   <div>{{ form.impacted_services.as_field_group }}</div>
   <div>{{ form.change.as_field_group }}</div><div>{{ form.reason.as_field_group }}</div>
 </fieldset>
-<fieldset><legend>Impact et vérifications</legend>
+<fieldset class="form-side"><legend>Impact et vérifications</legend>
   <div>{{ form.impact.as_field_group }}</div>
   <div class="form-pair"><div>{{ form.verification.as_field_group }}</div><div>{{ form.rollback.as_field_group }}</div></div>
   <div>{{ form.reference.as_field_group }}</div>

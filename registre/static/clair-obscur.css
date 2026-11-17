@@ -16,7 +16,11 @@ body:not(:has(.clair)) main > .narrow > a, body:not(:has(.clair)) .eyebrow { col
 .narrow .form { color: #2f1938; }
 .narrow .form label { color: #3d2649; }
 .narrow .form .primary { background: #701ad0; }
-.intervention-form { max-width: 900px; }
+.intervention-form { max-width: 1680px; }
+body:has(.intervention-form) :is(main, .bar-inner) {
+  max-width: 1760px;
+  padding-inline: clamp(16px, 3vw, 40px);
+}
 .intervention-form fieldset {
   min-width: 0;
   border: 1px solid #e1d0de;
@@ -26,6 +30,16 @@ body:not(:has(.clair)) main > .narrow > a, body:not(:has(.clair)) .eyebrow { col
 }
 .intervention-form legend { font-weight: 700; padding: 0 8px; }
 .intervention-form fieldset > div + div { margin-top: 12px; }
+@media (min-width: 1180px) {
+  .intervention-form .form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+  .intervention-form .form > :not(.form-side) { grid-column: 1 / -1; }
+  .intervention-form .form > :is(fieldset, div) { margin: 0; }
+}
 .form-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .form-states textarea { font-family: Consolas, monospace; min-height: 132px; }
 .pending-captures li { padding: 6px 10px; border-radius: 14px; background: #f3e6ef; }
