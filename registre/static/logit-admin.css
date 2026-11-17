@@ -101,7 +101,6 @@ body.login #container { border-radius: 24px; overflow: hidden; box-shadow: 0 5px
 .admin-pill:hover { background: #e7d2e9; }
 .admin-pill.admin-primary { background: #7020ab; color: #fff; border-color: #7020ab; }
 .admin-pill.admin-primary:hover { background: #541780; color: #fff; }
-.logit-admin-home { background: radial-gradient(ellipse at 0% 2%, #9b659c, transparent 48%), linear-gradient(140deg,#422044,#221327 68%,#70446f); }
 .logit-admin-home #content { width: min(100%, 1620px); box-sizing: border-box; margin: 0 auto; padding: clamp(18px, 4vw, 48px) clamp(14px, 3vw, 34px); }
 .logit-admin-home #content h1 { color: #fff1fb; font-size: clamp(1.8rem, 4vw, 2.7rem); margin: 0 0 20px; }
 .admin-dashboard { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -125,4 +124,131 @@ body.login #container { border-radius: 24px; overflow: hidden; box-shadow: 0 5px
 @media (max-width: 720px) {
     .admin-dashboard { grid-template-columns: minmax(0, 1fr); }
     #header #user-tools { justify-content: flex-start; }
+}
+
+/* Shared shell for administration screens */
+body {
+    background: radial-gradient(ellipse at 0% 2%, #9b659c, transparent 48%), linear-gradient(140deg, #422044, #221327 68%, #70446f);
+}
+body:not(.logit-admin-home) #main {
+    width: min(100%, 1620px);
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding: clamp(14px, 3vw, 38px) clamp(12px, 2.5vw, 30px);
+    gap: 16px;
+    align-items: start;
+}
+body #main:has(#logit-admin-nav) {
+    display: grid;
+    grid-template-columns: 238px minmax(0, 1fr);
+}
+#logit-admin-nav {
+    display: grid;
+    gap: 18px;
+    padding: 14px;
+    background: #341a40;
+    color: #fff1fb;
+    border: 1px solid #795482;
+    border-radius: 24px;
+}
+#logit-admin-nav .admin-pill { justify-self: start; background: #53305f; color: #fff1fb; border-color: #805889; }
+#logit-admin-nav :is(ul,li) { margin: 0; padding: 0; list-style: none; }
+#logit-admin-nav ul { display: grid; gap: 5px; }
+#logit-admin-nav h2 { color: #eacaf1; font-size: .8rem; margin: 0 0 6px; font-weight: 650; }
+#logit-admin-nav li a {
+    display: block;
+    padding: 9px 12px;
+    border-radius: 999px;
+    color: #fff1fb;
+    overflow-wrap: anywhere;
+}
+#logit-admin-nav li a:hover { background: #53305f; }
+#logit-admin-nav li a[aria-current] { background: #7020ab; font-weight: 650; }
+#logit-admin-nav a:focus-visible { outline-color: #edcfff; }
+body:not(.logit-admin-home):not(.login) #content-start {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    background: #fbf2f2;
+    border: 1px solid #e1d0de;
+    border-radius: 26px;
+    box-shadow: 0 5px 16px #25102e30;
+}
+body:not(.logit-admin-home):not(.login) #content {
+    padding: clamp(13px, 2.3vw, 30px);
+    width: auto;
+    min-width: 0;
+}
+body:not(.logit-admin-home) #content h1 {
+    font-size: clamp(1.4rem, 3vw, 2.1rem);
+    overflow-wrap: anywhere;
+    margin-bottom: 14px;
+}
+body div.breadcrumbs {
+    background: #492552;
+    color: #f4e2f5;
+    padding-block: 10px;
+    overflow-wrap: anywhere;
+}
+body div.breadcrumbs a, body div.breadcrumbs a:visited { color: #fff1fb; }
+body .breadcrumbs a:focus-visible { outline-color: #edcfff; }
+body #content .object-tools {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    float: none;
+    margin: 0 0 12px;
+    padding-left: 0;
+}
+body #content .object-tools li { margin: 0; float: none; height: auto; }
+body #content .object-tools a {
+    background-color: #7020ab;
+    color: #fff;
+    padding: 9px 16px;
+    text-transform: none;
+    font-size: .875rem;
+}
+body #content .object-tools a:is(.addlink,.historylink) { background-image: none; }
+body #content .object-tools a:hover { background-color: #541780; }
+body #content #changelist { overflow: visible; background: transparent; }
+body #changelist .changelist-form-container { min-width: 0; max-width: 100%; }
+body #changelist .results { overflow-x: auto; margin: 0; border-radius: 15px; }
+body #changelist #toolbar { padding: 12px; border: 1px solid #e1d0de; background: #f2e5ef; }
+body #toolbar form > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+body #toolbar #searchbar { flex: 1 1 170px; width: auto; min-width: 0; background: #fcf3f5; }
+body #toolbar input[type="submit"], body #changelist .actions button {
+    background: #eed8ef;
+    border: 1px solid #d9bfdc;
+    color: #4d205e;
+    padding: 7px 11px;
+    border-radius: 999px;
+}
+body .admin-empty-list {
+    margin: 0;
+    padding: 18px;
+    background: #f2e5ef;
+    border-radius: 15px;
+    color: #614d65;
+}
+body #changelist .paginator { background: transparent; }
+body #content fieldset.module { background: #f8edf2; border: 1px solid #e1d0de; margin-bottom: 12px; }
+body #content fieldset.module :is(h2, summary) { color: #4d205e; background: #eedcee; }
+body #content :is(input:not([type="submit"],[type="checkbox"],[type="radio"],[type="hidden"]), textarea, select) { max-width: 100%; }
+body .submit-row { background: #f2e5ef; }
+body .submit-row input { text-transform: none; }
+body .submit-row a { text-transform: none; }
+@media (max-width: 900px) {
+    body #main:has(#logit-admin-nav) { grid-template-columns: minmax(0, 1fr); }
+    #logit-admin-nav { grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr)); align-items: start; gap: 10px; }
+    #logit-admin-nav > .admin-pill { grid-column: 1 / -1; }
+    body #changelist.filtered { flex-wrap: wrap; }
+    body #changelist .changelist-form-container { flex: 1 1 100%; width: 100%; }
+    body #changelist .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    body #changelist .actions label { max-width: 100%; white-space: normal; }
+    body #changelist-filter { flex-basis: 100%; margin-inline: 0; }
+}
+@media (max-width: 480px) {
+    body #content .form-row { padding-inline: 9px; }
+    body #content .submit-row { display: flex; flex-wrap: wrap; gap: 7px; }
 }

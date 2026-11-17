@@ -8,6 +8,28 @@
 <div id="site-name"><a class="logit-brand" href="{% url 'admin:index' %}"><span class="admin-brand-mark" aria-hidden="true"></span>Log<span>IT</span></a> <span class="logit-admin-label">Administration</span></div>
 {% endblock %}
 
+{% block nav-sidebar %}
+  {% if available_apps %}
+  <nav id="logit-admin-nav" aria-label="Navigation de l’administration">
+    <a class="admin-pill" href="{% url 'admin:index' %}">← Accueil administration</a>
+    {% for app in available_apps %}
+      <section aria-labelledby="nav-{{ app.app_label }}">
+        <h2 id="nav-{{ app.app_label }}">{% if app.app_label == 'auth' %}Comptes et accès{% elif app.app_label == 'registre' %}Référentiels{% else %}{{ app.name }}{% endif %}</h2>
+        <ul>
+        {% for model in app.models %}
+          {% if model.admin_url %}
+          <li><a href="{{ model.admin_url }}"{% if model.admin_url in request.path %} aria-current="location"{% endif %}>{{ model.name }}</a></li>
+          {% elif model.add_url %}
+          <li><a href="{{ model.add_url }}">Ajouter {{ model.name|lower }}</a></li>
+          {% endif %}
+        {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+  </nav>
+  {% endif %}
+{% endblock %}
+
 {% block welcome-msg %}<span class="admin-account">{{ user.get_username }}</span>{% endblock %}
 
 {% block userlinks %}
