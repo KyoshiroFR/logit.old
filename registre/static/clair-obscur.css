@@ -304,6 +304,22 @@ body:has(.clair) main { max-width: 1960px; padding: clamp(12px, 3vw, 48px) clamp
   padding: 12px;
 }
 .clair .sillage-nav a { color: inherit; }
+.clair .sillage-nav .sillage-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 7px 10px;
+  font-size: .875rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.clair .sillage-nav-link span {
+  flex: none;
+  width: 16px;
+  margin: 0;
+  text-align: center;
+}
 .clair .sillage-nav a:hover { background: #542762; }
 .clair .sillage-nav a[aria-current], .clair .button.primary, .clair .fiche-tabs button[aria-selected="true"] {
   background: linear-gradient(160deg,#a840ef,#651aca);
