@@ -6,7 +6,7 @@ ALLOWED_HOSTS = [os.getenv("LOGIT_HOST", "localhost")]
 ROOT_URLCONF = "logit.urls"
 WSGI_APPLICATION = "logit.wsgi.application"
 INSTALLED_APPS = [
-    "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
+    "logit.admin_config.LogITAdminConfig", "django.contrib.auth", "django.contrib.contenttypes",
     "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
     "registre",
     "django_otp", "django_otp.plugins.otp_totp",

@@ -33,6 +33,8 @@ Pour une utilisation dans le navigateur, faire approuver ce certificat d’autor
 
 Dans l’administration, créer les comptes nominatifs et les équipements avant la première saisie. Les comptes ordinaires ont accès au registre et à la correction des fiches. L’administration gère les comptes et les référentiels. Les corrections sont horodatées et conservent les valeurs avant et après.
 
+Un superutilisateur actif accède à l’administration même si la case « Équipe » est décochée. Le statut « Équipe » seul donne accès au panneau avec les permissions déléguées, sans ouvrir la gestion des comptes, groupes ou du journal complet.
+
 Un compte créé depuis l’administration doit remplacer son mot de passe temporaire à la première connexion. La case « TOTP obligatoire » se règle à la création ou sur la fiche utilisateur. Si elle est cochée, l’utilisateur scanne un QR code et confirme un premier code, puis fournit un nouveau code à chaque connexion. Le registre et l’administration sont bloqués tant que cette vérification n’a pas abouti. Les comptes existants conservent leur accès actuel jusqu’à l’activation de la case.
 
 En cas de perte de l’appareil, vérifier l’identité de la personne avant toute réinitialisation. Un opérateur autorisé peut supprimer l’appareil TOTP du compte concerné depuis le shell Django local, en conservant la case obligatoire. La connexion suivante impose un nouvel enrôlement. Les sauvegardes SQLite contiennent les secrets TOTP et doivent bénéficier des mêmes protections que la base active.

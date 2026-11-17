@@ -18,6 +18,18 @@ from .views import configuration_lines
 
 
 class RegistreTests(TestCase):
+    def test_superutilisateur_sans_statut_equipe_accede_a_admin(self):
+        users = get_user_model()
+        admin = users.objects.create_user("super-admin", is_superuser=True)
+        self.assertFalse(admin.is_staff)
+        self.client.force_login(admin)
+        for path in ("", "auth/user/", "auth/group/", "journal/"):
+            self.assertEqual(self.client.get("/administration/" + path, secure=True).status_code, 200)
+        self.assertContains(self.client.get("/compte/", secure=True), 'href="/administration/"')
+        admin.is_active = False
+        admin.save(update_fields=["is_active"])
+        self.assertEqual(self.client.get("/administration/", secure=True).status_code, 302)
+
     def test_reutilisation_reprend_le_contexte_sans_les_preuves(self):
         users = get_user_model()
         author = users.objects.create_user("auteur-source")

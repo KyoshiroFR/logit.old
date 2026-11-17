@@ -7,7 +7,7 @@
     <div class="account-identity"><strong>{{ user.get_full_name|default:user.get_username }}</strong>{% if user.get_full_name %}<span>{{ user.get_username }}</span>{% endif %}</div>
     <a href="{% url 'account' %}">Mon compte</a>
     <a href="{% url 'account_security' %}">Sécurité</a>
-    {% if user.is_staff %}<a href="{% url 'admin:index' %}">Administration</a>{% endif %}
+    {% if user.is_superuser or user.is_staff %}<a href="{% url 'admin:index' %}">Administration</a>{% endif %}
     <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Se déconnecter</button></form>
   </nav>
 </details>
