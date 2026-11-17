@@ -49,6 +49,7 @@ Les miniatures sont affichées avant enregistrement. Retirer une miniature écar
 Dans Clair-obscur, les champs facultatifs « état avant » et « état après » alimentent la comparaison. L’onglet « Carte des impacts » relie le changement à son équipement, au service principal et aux services concernés sélectionnés dans la fiche. Le filtre Service couvre ces deux types de rattachement.
 
 Le registre affiche les cinq dernières interventions. Les recherches et filtres ouvrent `/historique/`, paginé à 20 résultats. Depuis une fiche ouverte dans ces résultats, « Retour aux résultats » conserve la page et les filtres.
+Sur ordinateur, la sélection d’une ligne ouvre un panneau de lecture à droite. Les boutons précédent et suivant parcourent les résultats de la page courante sans déplacer la liste. Sur mobile, la ligne ouvre directement la fiche complète.
 La recherche couvre le titre, la modification, la référence technique, le nom de l’équipement et les noms des services principal et concernés, y compris lorsque ces référentiels ont été archivés.
 
 Depuis l’administration, désactiver les comptes et archiver les équipements et services pour les retirer de l’usage courant. Les écrans de gestion bloquent leur suppression et conservent les liens historiques et le journal. Seuls les superutilisateurs gèrent les comptes et groupes et consultent le journal complet. Un membre du personnel doit recevoir les droits explicites pour gérer les référentiels.

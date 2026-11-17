@@ -10,6 +10,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse
 from django.views.decorators.cache import never_cache
+from django.views.decorators.vary import vary_on_headers
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from PIL import Image, UnidentifiedImageError
@@ -138,6 +139,7 @@ def history_query(params, include_page=True):
 
 
 @login_required
+@vary_on_headers("X-LogIT-Preview")
 def history(request):
     filters = Filters(request.GET)
     items = Intervention.objects.select_related("author", "equipment", "service")
@@ -153,11 +155,25 @@ def history(request):
             active_filters.append((field.label, value, remaining.urlencode()))
     detail_params = params.copy()
     detail_params["page"] = page.number
+    panel_query = detail_params.urlencode()
     detail_params["from"] = "history"
-    return render(request, "history.html", {
+    results = list(page.object_list)
+    selected_index = next(
+        (index for index, item in enumerate(results) if str(item.pk) == request.GET.get("fiche")), None,
+    )
+    selected = results[selected_index] if selected_index is not None else None
+    context = {
         "filters": filters, "page": page, "query": params.urlencode(),
         "active_filters": active_filters, "detail_query": detail_params.urlencode(),
-    })
+        "panel_query": panel_query, "preview": selected,
+        "previous_preview": results[selected_index - 1] if selected_index is not None and selected_index > 0 else None,
+        "next_preview": results[selected_index + 1] if selected_index is not None and selected_index + 1 < len(results) else None,
+    }
+    if selected:
+        context["preview_services"] = selected.impacted_services.all()
+    if request.headers.get("X-LogIT-Preview") == "1":
+        return render(request, "history_preview.html", context, status=200 if selected else 404)
+    return render(request, "history.html", context)
 
 
 @login_required

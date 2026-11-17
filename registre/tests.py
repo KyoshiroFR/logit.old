@@ -299,6 +299,15 @@ class RegistreTests(TestCase):
         second = self.client.get(history, {**filters, "page": 2}, secure=True)
         self.assertEqual(second.context["page"].object_list[0].title, "VPN 29")
         item = second.context["page"].object_list[0]
+        preview = self.client.get(history, {**filters, "page": 2, "fiche": item.pk}, secure=True, headers={"X-LogIT-Preview": "1"})
+        self.assertEqual(preview.context["preview"], item)
+        self.assertIsNone(preview.context["previous_preview"])
+        self.assertEqual(preview.context["next_preview"].title, "VPN 28")
+        self.assertContains(preview, "Fiche suivante")
+        self.assertEqual(
+            self.client.get(history, {**filters, "page": 1, "fiche": item.pk}, secure=True, headers={"X-LogIT-Preview": "1"}).status_code,
+            404,
+        )
         self.assertContains(second, f'href="/historique/?equipment={firewall.pk}"')
         detail = self.client.get(f"/interventions/{item.pk}/", {**filters, "page": 2, "from": "history"}, secure=True)
         self.assertContains(detail, f'href="/historique/?q=VPN&amp;equipment={firewall.pk}&amp;page=2"')

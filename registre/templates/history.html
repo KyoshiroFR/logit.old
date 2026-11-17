@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Historique des interventions · LogIT{% endblock %}
 {% block content %}
 <section class="surface history-page">
@@ -31,11 +32,13 @@
   {% endif %}
   <h2>{{ page.paginator.count }} résultat{{ page.paginator.count|pluralize }}</h2>
   {% if page.object_list %}
+    <div class="history-workspace">
+    <div class="history-list">
     <div class="history-columns" aria-hidden="true"><span>Intervention</span><span>Date</span><span>Équipement</span><span>Service</span><span>Auteur</span></div>
     <ul class="history-results">
     {% for item in page %}
       <li>
-        <a class="history-row" href="{% url 'detail' item.pk %}?{{ detail_query }}">
+        <a class="history-row" href="{% url 'detail' item.pk %}?{{ detail_query }}" data-preview-url="?{{ panel_query }}&amp;fiche={{ item.pk }}"{% if preview.pk == item.pk %} aria-current="true"{% endif %}>
           <strong>{{ item.title }}</strong>
           <time datetime="{{ item.occurred_at|date:'c' }}"><span class="visually-hidden">Date </span>{{ item.occurred_at|date:"d/m/Y · H:i" }}</time>
           <span><span class="visually-hidden">Équipement </span>{{ item.equipment }}</span>
@@ -52,6 +55,13 @@
       {% if page.has_next %}<a class="button" href="?{% if query %}{{ query }}&amp;{% endif %}page={{ page.next_page_number }}">Suivante</a>{% endif %}
     </nav>
     {% endif %}
+    </div>
+    <aside class="history-preview" aria-label="Panneau de lecture">
+      <div id="history-preview-content">{% include "history_preview.html" %}</div>
+      <p class="visually-hidden" role="status" id="history-preview-status"></p>
+    </aside>
+    </div>
+    <script src="{% static 'history-preview.js' %}" defer></script>
   {% else %}
     <p>{% if filters.errors %}Corrige les filtres signalés pour afficher les résultats.{% else %}Aucune intervention ne correspond à ces critères.{% endif %}</p>
   {% endif %}
