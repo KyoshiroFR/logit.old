@@ -1,0 +1,37 @@
+name: logit-preprod
+services:
+  app:
+    container_name: logit-preprod-app
+    image: logit:preprod
+    build: .
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Définir DJANGO_SECRET_KEY dans .env}
+      LOGIT_HOST: ${LOGIT_HOST:-localhost}
+      LOGIT_DB: /data/logit.sqlite3
+    volumes:
+      - sql:/data
+    networks:
+      - private
+  proxy:
+    container_name: logit-preprod-proxy
+    image: caddy:2-alpine
+    profiles: [proxy]
+    depends_on: [app]
+    environment:
+      LOGIT_HOST: ${LOGIT_HOST:-localhost}
+    ports:
+      - "${LOGIT_BIND_IP:-127.0.0.1}:80:80"
+      - "${LOGIT_BIND_IP:-127.0.0.1}:443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - tls:/data
+    networks:
+      - private
+volumes:
+  sql:
+    name: logit-preprod-sql
+  tls:
+    name: logit-preprod-tls
+networks:
+  private:
+    name: logit-preprod-net

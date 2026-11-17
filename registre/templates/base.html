@@ -1,0 +1,15 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}LogIT{% endblock %}</title><link rel="stylesheet" href="{% static 'logit.css' %}"></head>
+<body>
+<header class="bar"><div class="bar-inner">
+<a href="{% url 'index' %}" class="brand">Log<span>IT</span></a>
+{% if user.is_authenticated %}<nav aria-label="Compte">
+{% if user.is_staff %}<a href="{% url 'admin:index' %}">Administration</a>{% endif %}
+<span>{{ user.get_username }}</span>
+<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="quiet">Se déconnecter</button></form>
+</nav>{% endif %}
+</div></header>
+<main>{% block content %}{% endblock %}</main>
+</body></html>

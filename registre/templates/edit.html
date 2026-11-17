@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{% if item.pk %}Corriger{% else %}Nouvelle intervention{% endif %} · LogIT{% endblock %}
+{% block content %}
+<div class="narrow">
+<a href="{% if item.pk %}{% url 'detail' item.pk %}{% else %}{% url 'index' %}{% endif %}">← Retour au registre</a>
+<h1>{% if item.pk %}Corriger l’intervention{% else %}Nouvelle intervention{% endif %}</h1>
+<form method="post" class="surface form">{% csrf_token %}{{ form.as_div }}
+<div class="actions"><button class="primary">Enregistrer</button></div>
+</form></div>
+{% endblock %}

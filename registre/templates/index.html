@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Registre · LogIT{% endblock %}
+{% block content %}
+<div class="heading"><div><p class="eyebrow">Infrastructure et sécurité</p><h1>Registre des changements</h1></div>
+<a class="button primary" href="{% url 'create' %}">+ Nouvelle intervention</a></div>
+<form class="filters surface" method="get" action="{% url 'index' %}" aria-label="Filtrer le registre">
+{{ filters.as_div }}<div class="actions"><button>Filtrer</button><a href="{% url 'index' %}">Réinitialiser</a></div>
+</form>
+<div class="layout">
+<section class="surface journal" aria-label="Interventions">
+<h2>Interventions <span class="count">{{ page.paginator.count }}</span></h2>
+{% for item in page %}
+<a class="entry" href="{% url 'detail' item.pk %}?{% if query %}{{ query }}&amp;{% endif %}page={{ page.number }}#fiche"{% if selected.pk == item.pk %} aria-current="true"{% endif %}>
+<span class="tag">{{ item.equipment }}</span><strong>{{ item.title }}</strong>
+<span class="muted">{{ item.occurred_at|date:"d M Y · H:i" }} · {{ item.author }}</span></a>
+{% empty %}<p class="muted">Aucune intervention trouvée.</p>{% endfor %}
+{% if page.has_other_pages %}<nav class="actions" aria-label="Pagination">
+{% if page.has_previous %}<a href="?{{ query }}&amp;page={{ page.previous_page_number }}">Précédente</a>{% endif %}
+<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>
+{% if page.has_next %}<a href="?{{ query }}&amp;page={{ page.next_page_number }}">Suivante</a>{% endif %}
+</nav>{% endif %}
+</section>
+{% if selected %}<article class="surface fiche" id="fiche">
+<div class="heading"><span class="tag">{{ selected.equipment }}</span><a class="button" href="{% url 'edit' selected.pk %}">Corriger</a></div>
+<h2>{{ selected.title }}</h2>
+<p class="muted">{{ selected.occurred_at|date:"d M Y à H:i" }} · {{ selected.author }}{% if selected.service %} · {{ selected.service }}{% endif %}</p>
+<dl>
+<dt>Modification</dt><dd>{{ selected.change }}</dd>
+<dt>Motif</dt><dd>{{ selected.reason }}</dd>
+<dt>Impact</dt><dd>{{ selected.impact }}</dd>
+<dt>Vérification</dt><dd>{{ selected.verification }}</dd>
+<dt>Retour arrière</dt><dd>{{ selected.rollback }}</dd>
+{% if selected.reference %}<dt>Référence au journal technique</dt><dd>{{ selected.reference }}</dd>{% endif %}
+</dl>
+<h3>Historique des corrections</h3>
+{% for rev in revisions %}
+<details><summary>{{ rev.corrected_at|date:"d M Y à H:i:s" }} · {{ rev.editor }} · {{ rev.reason }}</summary>
+<dl>{% for field, values in rev.changes.items %}
+<dt>{{ field|capfirst }}</dt><dd>Avant · {{ values.before|default:"—" }}<br>Après · {{ values.after|default:"—" }}</dd>
+{% endfor %}</dl></details>
+{% empty %}<p class="muted">Aucune correction enregistrée.</p>{% endfor %}
+</article>{% endif %}
+</div>
+{% endblock %}
