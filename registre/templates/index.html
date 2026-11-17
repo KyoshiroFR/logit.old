@@ -1,7 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Registre · LogIT{% endblock %}
 {% block content %}
-<div class="heading"><div><p class="eyebrow">Infrastructure et sécurité</p><h1>Registre des changements</h1></div>
+<div class="sillage">
+<div class="heading sillage-heading"><div><p class="eyebrow">Infrastructure et sécurité</p><h1>Registre des changements</h1></div>
 <a class="button primary" href="{% url 'create' %}">+ Nouvelle intervention</a></div>
 <form class="filters surface" method="get" action="{% url 'index' %}" aria-label="Filtrer le registre">
 <div class="filter-row">
@@ -23,6 +25,7 @@
 <section class="surface journal" aria-label="Interventions">
 <h2>Interventions <span class="count">{{ page.paginator.count }}</span></h2>
 {% for item in page %}
+{% ifchanged item.occurred_at|date:"Y-m-d" %}<p class="day-label">{{ item.occurred_at|date:"l j F Y" }}</p>{% endifchanged %}
 <a class="entry" href="{% url 'detail' item.pk %}?{% if query %}{{ query }}&amp;{% endif %}page={{ page.number }}#fiche"{% if selected.pk == item.pk %} aria-current="true"{% endif %}>
 <span class="tag">{{ item.equipment }}</span><strong>{{ item.title }}</strong>
 <span class="muted">{{ item.occurred_at|date:"d M Y · H:i" }} · {{ item.author }}</span></a>
@@ -37,9 +40,31 @@
 <div class="heading"><span class="tag">{{ selected.equipment }}</span><a class="button" href="{% url 'edit' selected.pk %}">Corriger</a></div>
 <h2>{{ selected.title }}</h2>
 <p class="muted">{{ selected.occurred_at|date:"d M Y à H:i" }} · {{ selected.author }}{% if selected.service %} · {{ selected.service }}{% endif %}</p>
+<nav class="fiche-tabs" aria-label="Sections de la fiche" hidden>
+  <button type="button" data-panel="fiche-detail" aria-controls="fiche-detail" aria-pressed="true">Fiche</button>
+  <button type="button" data-panel="fiche-impact" aria-controls="fiche-impact" aria-pressed="false">Carte des impacts</button>
+</nav>
+<section id="fiche-detail" aria-label="Détails de l’intervention">
+<div class="fiche-overview{% if attachments %} has-captures{% endif %}">
 <dl class="impact">
 <dt>Impact</dt><dd>{{ selected.impact }}</dd>
 </dl>
+{% if attachments %}
+<section class="fiche-captures" aria-label="Captures">
+<h3>Captures</h3>
+<div class="capture-grid">
+{% for image in attachments %}
+  <figure>
+    <a href="{% url 'attachment' image.pk %}" target="_blank" rel="noopener" aria-label="Ouvrir {{ image.name }} dans un nouvel onglet">
+      <img src="{% url 'attachment' image.pk %}" alt="{{ image.name }}" loading="lazy">
+    </a>
+    <figcaption class="muted">{{ image.name }} · {{ image.uploader }} · {{ image.uploaded_at|date:"d M Y à H:i" }}</figcaption>
+  </figure>
+{% endfor %}
+</div>
+</section>
+{% endif %}
+</div>
 <dl class="facts">
 <div>
 <dt>Modification</dt><dd>{{ selected.change }}</dd>
@@ -55,19 +80,6 @@
 </div>
 {% if selected.reference %}<div><dt>Référence au journal technique</dt><dd>{{ selected.reference }}</dd></div>{% endif %}
 </dl>
-{% if attachments %}
-<h3>Captures</h3>
-<div class="capture-grid">
-{% for image in attachments %}
-  <figure>
-    <a href="{% url 'attachment' image.pk %}" target="_blank" rel="noopener" aria-label="Ouvrir {{ image.name }} dans un nouvel onglet">
-      <img src="{% url 'attachment' image.pk %}" alt="{{ image.name }}" loading="lazy">
-    </a>
-    <figcaption class="muted">{{ image.name }} · {{ image.uploader }} · {{ image.uploaded_at|date:"d M Y à H:i" }}</figcaption>
-  </figure>
-{% endfor %}
-</div>
-{% endif %}
 <h3>Historique des corrections</h3>
 {% for rev in revisions %}
 <details><summary>{{ rev.corrected_at|date:"d M Y à H:i:s" }} · {{ rev.editor }} · {{ rev.reason }}</summary>
@@ -75,6 +87,18 @@
 <dt>{{ field|capfirst }}</dt><dd>Avant · {{ values.before|default:"—" }}<br>Après · {{ values.after|default:"—" }}</dd>
 {% endfor %}</dl></details>
 {% empty %}<p class="muted">Aucune correction enregistrée.</p>{% endfor %}
+</section>
+<section id="fiche-impact" aria-labelledby="map-title">
+  <h3 id="map-title">Carte des impacts</h3>
+  <ol class="impact-map">
+    <li><span>Intervention</span><strong>{{ selected.title }}</strong></li>
+    <li><span>Équipement</span><strong>{{ selected.equipment }}</strong></li>
+    <li><span>Service</span><strong>{{ selected.service|default:"Aucun service renseigné" }}</strong></li>
+  </ol>
+  <dl class="impact"><dt>Impact déclaré</dt><dd>{{ selected.impact }}</dd></dl>
+</section>
 </article>{% endif %}
 </div>
+</div>
+{% if selected %}<script src="{% static 'sillage.js' %}" defer></script>{% endif %}
 {% endblock %}
