@@ -18,6 +18,10 @@ bash deploy/package.sh v1.0.0 <revision-testee> ../logit-release
 
 Le paquet contient les fichiers versionnés. L’installateur épingle la version et vérifie l’empreinte SHA-256 du paquet. La racine du répertoire de sortie correspond aux chemins publics `/install.sh` et `/releases/v1.0.0/`. Le serveur de distribution sert uniquement ces fichiers en HTTPS. Git reste sur la machine qui produit la version. Pour la recette locale de la distribution, le quatrième argument de `deploy/package.sh` permet de fixer une origine HTTPS de préproduction.
 
+La distribution publique utilise le vhost Nginx `/etc/nginx/sites-available/logit` sur le VPS Kyoshiro et le répertoire statique `/srv/logit/site`. Les certificats de `logit.kyoshiro.ovh` sont renouvelés par Certbot avec le webroot `/srv/logit/acme`. La recette du VPS utilise un Nginx séparé, limité à `127.0.0.1:26325`, dans `/srv/logit-preprod`.
+
+Après validation de la publication, vérifier que `/install.sh` et `/releases/<version>/install.sh` correspondent au script empaqueté et que le SHA-256 de l’archive téléchargée correspond à celui de la recette. Pour revenir à une version précédente, remettre son script versionné à la racine en conservant ses fichiers sous `/releases/`. Pour retirer la première publication, désactiver le lien `/etc/nginx/sites-enabled/logit`, lancer `nginx -t`, puis recharger Nginx.
+
 ## Préproduction sur Docker Desktop
 
 Depuis la racine, avec le moteur Linux de Docker Desktop actif et les ports 6320 et 6321 libres sur localhost, créer le fichier `.env` si nécessaire dans PowerShell.
