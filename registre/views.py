@@ -72,7 +72,10 @@ class InterventionForm(forms.ModelForm):
     class Meta:
         model = Intervention
         exclude = ["author"]
-        widgets = {"occurred_at": forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"})}
+        widgets = {
+            "occurred_at": forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"}),
+            "impacted_services": forms.CheckboxSelectMultiple,
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -6,6 +6,7 @@ let pending = [];
 let previews = [];
 
 function update(files) {
+    input.closest("details").open = true;
     if (files.length > 10) {
         status.textContent = "Tu peux ajouter jusqu’à 10 captures.";
         return;

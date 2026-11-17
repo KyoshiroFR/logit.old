@@ -42,6 +42,35 @@ body:has(.intervention-form) :is(main, .bar-inner) {
 }
 .intervention-form legend { font-weight: 700; padding: 0 8px; }
 .intervention-form fieldset > div + div { margin-top: 12px; }
+.intervention-form .form-extras { padding: 12px 14px; border: 1px solid #e1d0de; border-radius: 19px; }
+.intervention-form details summary { font-weight: 650; }
+.intervention-form details[open] > summary { margin-bottom: 10px; }
+.intervention-form .form-extras .form-states { margin-bottom: 12px; }
+.intervention-form .form-save {
+  position: sticky; bottom: 0; z-index: 2; justify-content: flex-end;
+  background: #fbf2f2; border-top: 1px solid #e1d0de; border-radius: 14px;
+  padding: 10px 12px; box-shadow: 0 -6px 21px #47244e13;
+}
+html:has(.intervention-form) { scroll-padding-bottom: 78px; }
+.service-picker > span { display: block; margin-bottom: 5px; color: #3d2649; }
+.service-picker .services-search { margin-bottom: 8px; }
+.services-selected { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.services-selected button {
+  min-height: 32px; padding: 4px 10px; background: #ead4ee; color: #4a2356;
+  text-align: left; overflow-wrap: anywhere; max-width: 100%;
+}
+.services-selected button:hover { background: #e1c0e7; }
+.services-options {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 5px; padding: 6px; border: 1px solid #e1d0de; border-radius: 14px;
+  max-height: 180px; overflow: auto; scrollbar-color: #a77bb4 #f3e3ef;
+}
+.services-options label { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 9px; margin: 0; cursor: pointer; }
+.services-options label:has(input:checked) { background: #f0dff2; }
+.services-options label span { min-width: 0; overflow-wrap: anywhere; }
+.services-options input[type="checkbox"] { flex: none; width: 16px; min-height: 16px; accent-color: #7020ab; }
+.service-picker [hidden] { display: none; }
+.services-empty { margin: 6px 0 0; }
 @media (min-width: 1180px) {
   .intervention-form .form {
     display: grid;
