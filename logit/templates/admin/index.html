@@ -1,0 +1,47 @@
+{% extends "admin/base_site.html" %}
+{% load log %}
+
+{% block title %}Administration · LogIT{% endblock %}
+{% block bodyclass %}{{ block.super }} logit-admin-home{% endblock %}
+{% block nav-breadcrumbs %}{% endblock %}
+{% block nav-sidebar %}{% endblock %}
+{% block content_title %}<h1>Administration</h1>{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+  {% for app in app_list %}
+  <section class="admin-panel" aria-labelledby="admin-app-{{ app.app_label }}">
+    <h2 id="admin-app-{{ app.app_label }}">{% if app.app_label == 'auth' %}Comptes et accès{% elif app.app_label == 'registre' %}Référentiels{% else %}{{ app.name }}{% endif %}</h2>
+    <ul class="admin-models">
+      {% for model in app.models %}
+      <li>
+        <strong>{{ model.name }}</strong>
+        <div class="admin-actions">
+          {% if model.admin_url %}<a class="admin-pill" href="{{ model.admin_url }}">Voir <span class="visually-hidden">{{ model.name }}</span></a>{% endif %}
+          {% if model.add_url %}<a class="admin-pill admin-primary" href="{{ model.add_url }}">Ajouter <span class="visually-hidden">{{ model.name }}</span></a>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% empty %}<p>Aucun module accessible à ce compte.</p>{% endfor %}
+</div>
+
+{% get_admin_log 10 as admin_log for_user user %}
+<section class="admin-panel admin-activity" aria-labelledby="admin-activity-title">
+  <h2 id="admin-activity-title">Mes actions récentes</h2>
+  {% if admin_log %}
+  <ul>
+    {% for entry in admin_log %}
+    <li>
+      <span>
+        {% if entry.is_addition %}Ajout{% elif entry.is_change %}Modification{% elif entry.is_deletion %}Suppression{% endif %} ·
+        {% if entry.get_admin_url and not entry.is_deletion %}<a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>{% else %}{{ entry.object_repr }}{% endif %}
+      </span>
+      <time datetime="{{ entry.action_time|date:'c' }}">{{ entry.action_time|date:"d/m/Y · H:i" }}</time>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p>Aucune action d’administration enregistrée pour ce compte.</p>{% endif %}
+</section>
+{% endblock %}
