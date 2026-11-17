@@ -1,0 +1,8 @@
+<div class="configuration-diff">
+{% for number, marker, tokens in lines %}
+  <div{% if marker == "+" %} class="changed"{% elif marker == "-" %} class="removed"{% endif %}>
+    <span class="line-number" aria-hidden="true">{{ number }}</span>
+    <code>{% if marker %}<b>{{ marker }}</b> {% endif %}{% for token in tokens %}{% if forloop.counter|divisibleby:2 %}<em>{{ token }}</em>{% else %}{{ token }}{% endif %}{% endfor %}</code>
+  </div>
+{% endfor %}
+</div>

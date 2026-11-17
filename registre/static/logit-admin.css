@@ -43,7 +43,9 @@
 }
 
 body { background: radial-gradient(ellipse at 18% 0%, #edd9ef, transparent 540px), var(--body-bg); }
-#header { padding-block: 14px; }
+#header { padding-block: 14px; background: #341a40; color: #f6e9ef; }
+#header a, #header .logit-admin-label, #logout-form button { color: #f6e9ef; }
+#header .logit-brand span { color: #d290fd; }
 div.breadcrumbs { border-radius: 0 0 20px 20px; }
 #site-name { display: flex; align-items: baseline; flex-wrap: wrap; gap: 12px; }
 #site-name .logit-brand { font-size: 1.55rem; letter-spacing: -.055em; font-weight: 800; }

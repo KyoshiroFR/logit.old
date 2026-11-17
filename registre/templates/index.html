@@ -5,12 +5,13 @@
 {% block content %}
 <div class="sillage sillage-reference clair">
   <header class="sillage-top">
-    <a class="sillage-wordmark" href="{% url 'index' %}">LogIT</a>
+    <a class="sillage-wordmark" href="{% url 'index' %}"><span class="clair-logo" aria-hidden="true"></span>LogIT</a>
     <div class="sillage-toolbar">
       <label class="sillage-search">
         <span class="visually-hidden">Rechercher dans le registre</span>
         <input id="{{ filters.q.id_for_label }}" name="q" type="search" form="sillage-filters" value="{{ filters.q.value|default_if_none:'' }}" placeholder="Rechercher dans le registre…">
       </label>
+      <kbd class="search-shortcut" aria-hidden="true" hidden>Ctrl + K</kbd>
       <details class="sillage-account">
         <summary aria-label="Compte {{ user.get_username }}">{{ user.get_username|slice:":2"|upper }}</summary>
         <div><p>{{ user.get_username }}</p>
@@ -26,16 +27,16 @@
   <section class="surface journal" aria-label="Interventions">
     <h1>Interventions récentes</h1>
     <form class="sillage-filter" id="sillage-filters" method="get" action="{% url 'history' %}" aria-label="Filtrer le registre">
-      <div class="sillage-filter-row">
-        <label class="visually-hidden" for="{{ filters.equipment.id_for_label }}">Équipement</label>{{ filters.equipment }}
-        <button type="submit">Filtrer</button>
-      </div>
-      {{ filters.q.errors }}{{ filters.equipment.errors }}
-      <details class="advanced"{% if filters.service.value or filters.author.value or filters.start.value or filters.end.value or filters.errors %} open{% endif %}>
-        <summary>Plus de filtres</summary>
-        <div class="advanced-fields">
-          <div>{{ filters.service.as_field_group }}</div><div>{{ filters.author.as_field_group }}</div>
-          <div>{{ filters.start.as_field_group }}</div><div>{{ filters.end.as_field_group }}</div>
+      <details class="quick-filters"{% if filters.equipment.value or filters.service.value or filters.author.value or filters.start.value or filters.end.value or filters.errors %} open{% endif %}>
+        <summary>Filtres</summary>
+        <div class="quick-filter-panel">
+          {{ filters.q.errors }}
+          <div class="advanced-fields">
+            <div>{{ filters.equipment.as_field_group }}</div><div>{{ filters.service.as_field_group }}</div>
+            <div>{{ filters.author.as_field_group }}</div><div>{{ filters.start.as_field_group }}</div>
+            <div>{{ filters.end.as_field_group }}</div>
+          </div>
+          <button type="submit">Appliquer les filtres</button>
         </div>
       </details>
     </form>
@@ -62,40 +63,30 @@
       <span class="tag">{{ selected.equipment }}</span>
     </header>
     <nav class="fiche-tabs" aria-label="Sections de la fiche" hidden>
-      <button type="button" data-panel="fiche-detail" aria-controls="fiche-detail" aria-pressed="true">Fiche</button>
-      <button type="button" data-panel="fiche-history" aria-controls="fiche-history" aria-pressed="false">Corrections</button>
-      <button type="button" data-panel="fiche-impact" aria-controls="fiche-impact" aria-pressed="false">Carte des impacts</button>
+      <button type="button" data-panel="fiche-detail" aria-controls="fiche-detail">Fiche</button>
+      <button type="button" data-panel="fiche-history" aria-controls="fiche-history">Corrections</button>
+      <button type="button" data-panel="fiche-impact" aria-controls="fiche-impact">Carte des impacts</button>
     </nav>
     <section id="fiche-detail" aria-label="Détails de l’intervention">
       {% with revision=revisions.0 %}
       <div class="clair-diff" aria-label="Comparaison avant et après">
         <section><h3>Avant</h3><div class="clair-code">
-          {% if selected.before_state %}<code>{{ selected.before_state }}</code>{% else %}{% for field, values in revision.changes.items %}
+          {% if before_lines %}{% include "configuration_lines.html" with lines=before_lines only %}{% else %}{% for field, values in revision.changes.items %}
           <div><span>{{ field|capfirst }}</span><code>{{ values.before|default:"—" }}</code></div>
           {% empty %}<p>État antérieur non renseigné.</p>{% endfor %}{% endif %}
         </div></section>
         <section><h3>Après</h3><div class="clair-code">
-          {% if configuration_diff %}
-            <pre class="configuration-diff">{% for marker, line in configuration_diff %}<code{% if marker == "+" %} class="changed"{% elif marker == "-" %} class="removed"{% endif %}>{{ marker }} {{ line }}</code>{% endfor %}</pre>
-          {% elif selected.after_state %}<code>{{ selected.after_state }}</code>{% else %}{% for field, values in revision.changes.items %}
+          {% if after_lines %}{% include "configuration_lines.html" with lines=after_lines only %}{% else %}{% for field, values in revision.changes.items %}
           <div class="changed"><span>{{ field|capfirst }}</span><code>{{ values.after|default:"—" }}</code></div>
           {% empty %}<div><span>Modification</span><code>{{ selected.change }}</code></div>{% endfor %}{% endif %}
         </div></section>
       </div>
       {% endwith %}
       <dl class="clair-impact"><dt>Impact</dt><dd>{{ selected.impact }}</dd></dl>
-      <div class="fiche-overview">
-        <div class="sillage-summary">
-          <dl class="sillage-metadata">
-            <div><dt>Équipement</dt><dd>{{ selected.equipment }}</dd></div>
-            <div><dt>Service</dt><dd>{{ selected.service|default:"Non renseigné" }}</dd></div>
-            <div><dt>Auteur</dt><dd>{{ selected.author }}</dd></div>
-          </dl>
-          <dl class="impact"><dt>Impact</dt><dd>{{ selected.impact }}</dd></dl>
-        </div>
+      {% if attachments %}
         <section class="fiche-captures" aria-label="Captures">
-          <h3>Aperçu instantané</h3>
-          {% if attachments %}<div class="capture-grid">
+          <h3>Captures jointes</h3>
+          <div class="capture-grid">
           {% for image in attachments %}
             <figure>
               <a href="{% url 'attachment' image.pk %}" target="_blank" rel="noopener" aria-label="Ouvrir {{ image.name }} dans un nouvel onglet">
@@ -104,13 +95,11 @@
               <figcaption class="muted">{{ image.name }} · {{ image.uploader }} · {{ image.uploaded_at|date:"d M Y à H:i" }}</figcaption>
             </figure>
           {% endfor %}
-          </div>{% else %}
-            <div class="sillage-empty-preview"><span aria-hidden="true">▧</span><p>Aucune capture jointe</p></div>
-          {% endif %}
+          </div>
         </section>
-      </div>
-      <section class="sillage-description" aria-label="Description">
-        <h3>Description</h3>
+      {% endif %}
+      <details class="sillage-description">
+        <summary>Description et vérifications</summary>
         <dl class="facts">
           <div><dt>Modification</dt><dd>{{ selected.change }}</dd></div>
           <div><dt>Motif</dt><dd>{{ selected.reason }}</dd></div>
@@ -118,11 +107,7 @@
           <div id="retour-arriere"><dt>Retour arrière</dt><dd>{{ selected.rollback }}</dd></div>
           {% if selected.reference %}<div><dt>Référence au journal technique</dt><dd>{{ selected.reference }}</dd></div>{% endif %}
         </dl>
-        <div class="actions sillage-record-actions">
-          <a class="button" href="#retour-arriere">Voir le retour arrière</a>
-          <a class="button primary" href="{% url 'edit' selected.pk %}{% if detail_query %}?{{ detail_query }}{% endif %}">Corriger</a>
-        </div>
-      </section>
+      </details>
     </section>
     <section id="fiche-history" aria-labelledby="history-title">
       <h3 id="history-title">Corrections de cette fiche</h3>
@@ -135,7 +120,7 @@
       {% empty %}<p class="muted">Aucune correction enregistrée.</p>{% endfor %}
     </section>
     <section id="fiche-impact" aria-labelledby="map-title">
-      <h3 id="map-title">Carte des impacts</h3>
+      <div class="heading map-heading"><h3 id="map-title">Carte des impacts</h3><button type="button" data-expand-map hidden>Vue agrandie</button></div>
       <div class="clair-map">
       <div class="prisme-graph{% if impact_services %} has-services{% endif %}">
         <div class="prisme-node"><span>Intervention</span><strong>{{ selected.title }}</strong></div>
@@ -150,8 +135,10 @@
         {% endif %}
       </div>
       <p class="muted">{% if impact_services %}Liaisons déclarées dans la fiche{% else %}Aucun service renseigné pour cette intervention.{% endif %}</p>
-      <dl class="clair-impact"><dt>Impact déclaré</dt><dd>{{ selected.impact }}</dd></dl>
       </div>
+      <dialog class="prisme-dialog" aria-labelledby="expanded-map-title">
+        <div class="heading"><h2 id="expanded-map-title">Carte des impacts</h2><form method="dialog"><button autofocus>Fermer</button></form></div>
+      </dialog>
     </section>
   </article>{% endif %}
   {% if selected %}
@@ -160,11 +147,11 @@
     <dl>
       <div><dt>Équipement</dt><dd>{{ selected.equipment }}</dd></div>
       <div><dt>Service</dt><dd>{{ selected.service|default:"Non renseigné" }}</dd></div>
-      <div><dt>Impact</dt><dd>{{ selected.impact }}</dd></div>
+      <div><dt>Auteur</dt><dd>{{ selected.author }}</dd></div>
     </dl>
     <a class="button primary" href="#retour-arriere" data-show-detail>↶ &nbsp; Retour arrière</a>
+    <a class="button" href="{% url 'edit' selected.pk %}{% if detail_query %}?{{ detail_query }}{% endif %}">Corriger</a>
   </aside>
   {% endif %}
 </div>
-{% if selected %}<script src="{% static 'sillage.js' %}" defer></script>{% endif %}
 {% endblock %}

@@ -6,9 +6,21 @@ from django.test import TestCase
 from PIL import Image
 
 from .models import Attachment, Equipment, Intervention, Revision, Service
+from .views import configuration_lines
 
 
 class RegistreTests(TestCase):
+    def test_diff_conserve_les_lignes_et_leurs_numeros(self):
+        old = [f'ligne "{number}"' for number in range(1, 41)]
+        new = old.copy()
+        new[19:20] = ['valeur "<balise>"', "ligne ajoutée"]
+        before, after = configuration_lines("\n".join(old), "\n".join(new))
+        self.assertEqual(len(before), 40)
+        self.assertEqual(len(after), 42)
+        self.assertEqual(after[19], (20, "-", ["ligne ", '"20"', ""]))
+        self.assertEqual(after[20], (20, "+", ["valeur ", '"<balise>"', ""]))
+        self.assertEqual(after[-1][0], 41)
+
     def test_traceabilite_et_acces(self):
         user_model = get_user_model()
         author = user_model.objects.create_user("karim", password="local-test-only")

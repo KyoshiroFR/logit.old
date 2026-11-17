@@ -1,5 +1,6 @@
 from difflib import unified_diff
 from itertools import islice
+import re
 
 from django import forms
 from django.contrib.auth.decorators import login_required
@@ -14,6 +15,26 @@ from django.urls import reverse
 from PIL import Image, UnidentifiedImageError
 
 from .models import Attachment, Equipment, Intervention, Revision, Service
+
+
+QUOTED_VALUE = re.compile(r'("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')')
+
+
+def configuration_lines(before, after):
+    old_lines, new_lines = before.splitlines(), after.splitlines()
+    numbered_before = [(number, "", QUOTED_VALUE.split(line)) for number, line in enumerate(old_lines, 1)]
+    if not before or not after or old_lines == new_lines:
+        return numbered_before, [(number, "", QUOTED_VALUE.split(line)) for number, line in enumerate(new_lines, 1)]
+    diff = unified_diff(old_lines, new_lines, n=max(len(old_lines), len(new_lines)), lineterm="")
+    old_number = new_number = 1
+    numbered_after = []
+    for line in islice(diff, 3, None):
+        marker, content = line[0], line[1:]
+        number = old_number if marker == "-" else new_number
+        numbered_after.append((number, marker.strip(), QUOTED_VALUE.split(content)))
+        old_number += marker != "+"
+        new_number += marker != "-"
+    return numbered_before, numbered_after
 
 
 class MultipleImageInput(forms.ClearableFileInput):
@@ -134,12 +155,7 @@ def index(request, pk=None):
     services = list(selected.impacted_services.all()) if selected else []
     if selected and selected.service and selected.service not in services:
         services.insert(0, selected.service)
-    configuration_diff = []
-    if selected and selected.before_state and selected.after_state:
-        lines = unified_diff(selected.before_state.splitlines(), selected.after_state.splitlines(), lineterm="")
-        configuration_diff = [
-            (line[0], line[1:]) for line in islice(lines, 2, None) if not line.startswith("@@")
-        ]
+    before_lines, after_lines = configuration_lines(selected.before_state, selected.after_state) if selected else ([], [])
     return render(request, "index.html", {
         "filters": filters, "recent": recent, "selected": selected,
         "from_history": from_history, "return_query": params.urlencode(),
@@ -147,7 +163,7 @@ def index(request, pk=None):
         "revisions": selected.revisions.select_related("editor") if selected else [],
         "attachments": selected.attachments.defer("data").select_related("uploader") if selected else [],
         "impact_services": services,
-        "configuration_diff": configuration_diff,
+        "before_lines": before_lines, "after_lines": after_lines,
     })
 
 

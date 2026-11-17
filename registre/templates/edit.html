@@ -2,12 +2,29 @@
 {% load static %}
 {% block title %}{% if item.pk %}Corriger{% else %}Nouvelle intervention{% endif %} · LogIT{% endblock %}
 {% block content %}
-<div class="narrow">
+<div class="narrow intervention-form">
 <a href="{% if item.pk %}{% url 'detail' item.pk %}{% if request.GET.from == 'history' %}?{{ request.GET.urlencode }}{% endif %}{% else %}{% url 'index' %}{% endif %}">← {% if item.pk %}Retour à la fiche{% else %}Retour au registre{% endif %}</a>
 <h1>{% if item.pk %}Corriger l’intervention{% else %}Nouvelle intervention{% endif %}</h1>
-<form method="post" enctype="multipart/form-data" class="surface form">{% csrf_token %}{{ form.as_div }}
+<form method="post" enctype="multipart/form-data" class="surface form">{% csrf_token %}
+{{ form.non_field_errors }}
+<fieldset><legend>Intervention</legend>
+  <div class="form-pair"><div>{{ form.title.as_field_group }}</div><div>{{ form.occurred_at.as_field_group }}</div></div>
+  <div class="form-pair"><div>{{ form.equipment.as_field_group }}</div><div>{{ form.service.as_field_group }}</div></div>
+  <div>{{ form.impacted_services.as_field_group }}</div>
+  <div>{{ form.change.as_field_group }}</div><div>{{ form.reason.as_field_group }}</div>
+</fieldset>
+<fieldset><legend>Impact et vérifications</legend>
+  <div>{{ form.impact.as_field_group }}</div>
+  <div class="form-pair"><div>{{ form.verification.as_field_group }}</div><div>{{ form.rollback.as_field_group }}</div></div>
+  <div>{{ form.reference.as_field_group }}</div>
+</fieldset>
+<fieldset><legend>Comparaison et captures</legend>
+  <div class="form-pair form-states"><div>{{ form.before_state.as_field_group }}</div><div>{{ form.after_state.as_field_group }}</div></div>
+  <div>{{ form.attachments.as_field_group }}</div>
 <ul id="pending-captures" class="pending-captures"></ul>
 <p id="capture-status" class="muted" role="status"></p>
+</fieldset>
+{% if form.correction_reason %}<div>{{ form.correction_reason.as_field_group }}</div>{% endif %}
 <div class="actions"><button class="primary">Enregistrer</button></div>
 </form></div>
 <script src="{% static 'captures.js' %}" defer></script>

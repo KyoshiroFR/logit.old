@@ -36,10 +36,15 @@ Dans l’administration, créer les comptes nominatifs et les équipements avant
 ## Contrôles récurrents
 
 Dans un formulaire d’intervention, coller une capture avec Ctrl+V ou sélectionner des fichiers. Les images PNG, JPEG et WebP font au plus 5 Mo chacune, avec un maximum de 10 par fiche. Elles sont consultables après connexion et stockées dans la base SQLite, donc incluses dans sa sauvegarde.
+Les miniatures sont affichées avant enregistrement. Retirer une miniature écarte le fichier de l’envoi.
 
 Dans Clair-obscur, les champs facultatifs « état avant » et « état après » alimentent la comparaison. L’onglet « Carte des impacts » relie le changement à son équipement, au service principal et aux services concernés sélectionnés dans la fiche. Le filtre Service couvre ces deux types de rattachement.
 
 Le registre affiche les cinq dernières interventions. Les recherches et filtres ouvrent `/historique/`, paginé à 20 résultats. Depuis une fiche ouverte dans ces résultats, « Retour aux résultats » conserve la page et les filtres.
+
+Ctrl+K (Cmd+K sur Mac) place le curseur dans la recherche. Les flèches gauche et droite permettent de changer d’onglet de fiche. « Vue agrandie » ouvre la carte dans une fenêtre qui se ferme avec Échap.
+
+Pour les cas à rejouer en préproduction, consulter le [registre de régressions](regressions.md).
 
 ```powershell
 docker compose exec app python manage.py check
