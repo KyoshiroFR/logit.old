@@ -15,12 +15,7 @@
       {% include "account_menu.html" %}
     </div>
   </header>
-  <nav class="sillage-nav" aria-label="Navigation principale">
-    <a class="button sillage-nav-link" href="{% url 'index' %}" aria-current="page"><span aria-hidden="true">▤</span> Registre</a>
-    <a class="button sillage-nav-link" href="{% url 'history' %}"><span aria-hidden="true">◷</span> Historique</a>
-    <a class="button sillage-nav-link" href="{% url 'history' %}?author={{ user.pk }}"><span aria-hidden="true">▧</span> Mes interventions</a>
-    <a class="button sillage-nav-link" href="{% url 'create' %}"><span aria-hidden="true">＋</span> Nouvelle fiche</a>
-  </nav>
+  {% include "register_nav.html" %}
   <section class="surface journal" aria-label="Interventions">
     <h1>Interventions récentes</h1>
     <form class="sillage-filter" id="sillage-filters" method="get" action="{% url 'history' %}" aria-label="Filtrer le registre">
@@ -53,7 +48,7 @@
   </section>
 
   {% if selected %}<article class="surface fiche" id="fiche">
-    {% if from_history %}<a class="button history-return" href="{% url 'history' %}{% if return_query %}?{{ return_query }}{% endif %}">← Retour aux résultats</a>{% endif %}
+    {% if from_history %}<a class="button history-return" href="{% url 'history' %}{% if return_query %}?{{ return_query }}{% endif %}#result-{{ selected.pk }}">← Retour aux résultats</a>{% endif %}
     <header class="sillage-record">
       <span class="sillage-mark" aria-hidden="true">▤</span>
       <div><h2>{{ selected.title }}</h2><p class="muted">#{{ selected.pk }} · {{ selected.occurred_at|date:"d M Y à H:i" }}</p></div>
@@ -116,27 +111,7 @@
       </details>
       {% empty %}<p class="muted">Aucune correction enregistrée.</p>{% endfor %}
     </section>
-    <section id="fiche-impact" aria-labelledby="map-title">
-      <div class="heading map-heading"><h3 id="map-title">Carte des impacts</h3><button type="button" data-expand-map hidden>Vue agrandie</button></div>
-      <div class="clair-map">
-      <div class="prisme-graph{% if impact_services %} has-services{% endif %}">
-        <div class="prisme-node"><span>Intervention</span><strong>{{ selected.title }}</strong></div>
-        <div class="prisme-node prisme-equipment"><span>Équipement</span><strong>{{ selected.equipment }}</strong></div>
-        {% if impact_services %}
-          <section class="prisme-services" aria-label="Services concernés">
-            <h4>Services concernés</h4>
-            <ul>{% for service in impact_services %}
-              <li class="prisme-node">{{ service }}</li>
-            {% endfor %}</ul>
-          </section>
-        {% endif %}
-      </div>
-      <p class="muted">{% if impact_services %}Liaisons déclarées dans la fiche{% else %}Aucun service renseigné pour cette intervention.{% endif %}</p>
-      </div>
-      <dialog class="prisme-dialog" aria-labelledby="expanded-map-title">
-        <div class="heading"><h2 id="expanded-map-title">Carte des impacts</h2><form method="dialog"><button autofocus>Fermer</button></form></div>
-      </dialog>
-    </section>
+    {% include "impact_map.html" with item=selected services=impact_services only %}
   </article>{% endif %}
   {% if selected %}
   <aside class="clair-inspection surface" aria-label="Inspection">

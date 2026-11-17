@@ -14,16 +14,16 @@
   <div class="service-picker" role="group" aria-labelledby="services-label">
     <span id="services-label">{{ form.impacted_services.label }}</span>
     {{ form.impacted_services.errors }}
-    <div class="services-selected" aria-label="Services sélectionnés" hidden></div>
+    <ul class="services-selected" aria-label="Services sélectionnés" hidden></ul>
     <details class="services-disclosure"{% if form.impacted_services.errors %} open{% endif %}>
-    <summary>Choisir les services concernés</summary>
-    <input type="search" class="services-search" aria-label="Rechercher un service concerné" placeholder="Rechercher un service…" hidden>
-    <div class="services-options">
-    {% for option in form.impacted_services %}
-      <label for="{{ option.id_for_label }}">{{ option.tag }}<span>{{ option.choice_label }}</span></label>
-    {% empty %}<p>Aucun service disponible.</p>{% endfor %}
-    </div>
-    <p class="services-empty muted" role="status" hidden>Aucun service correspondant.</p>
+      <summary>Choisir les services concernés <span class="services-count" hidden></span></summary>
+      <input type="search" class="services-search" aria-label="Rechercher un service concerné" aria-controls="services-options" placeholder="Rechercher un service…" hidden>
+      <div class="services-options" id="services-options">
+        {% for option in form.impacted_services %}
+          <label for="{{ option.id_for_label }}">{{ option.tag }}<span>{{ option.choice_label }}</span></label>
+        {% empty %}<p>Aucun service disponible.</p>{% endfor %}
+      </div>
+      <p class="services-empty muted" role="status" hidden>Aucun service correspondant.</p>
     </details>
   </div>
   <div>{{ form.change.as_field_group }}</div><div>{{ form.reason.as_field_group }}</div>
@@ -33,13 +33,15 @@
   <div class="form-pair"><div>{{ form.verification.as_field_group }}</div><div>{{ form.rollback.as_field_group }}</div></div>
   <div>{{ form.reference.as_field_group }}</div>
 </fieldset>
-<details class="form-extras"{% if form.before_state.value or form.after_state.value or form.before_state.errors or form.after_state.errors or form.attachments.errors %} open{% endif %}>
-  <summary>Comparaison et captures</summary>
+<details class="form-extras"{% if form.before_state.value or form.after_state.value or form.before_state.errors or form.after_state.errors %} open{% endif %}>
+  <summary>Comparaison avant / après</summary>
   <div class="form-pair form-states"><div>{{ form.before_state.as_field_group }}</div><div>{{ form.after_state.as_field_group }}</div></div>
-  <div>{{ form.attachments.as_field_group }}</div>
-<ul id="pending-captures" class="pending-captures"></ul>
-<p id="capture-status" class="muted" role="status"></p>
 </details>
+<section class="form-captures" aria-label="Captures de l’intervention">
+  <div>{{ form.attachments.as_field_group }}</div>
+  <ul id="pending-captures" class="pending-captures" aria-label="Captures à enregistrer"></ul>
+  <p id="capture-status" class="muted" role="status"></p>
+</section>
 {% if form.correction_reason %}<div>{{ form.correction_reason.as_field_group }}</div>{% endif %}
 <div class="actions form-save"><button class="primary">Enregistrer</button></div>
 </form></div>

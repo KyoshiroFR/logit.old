@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Historique des interventions · LogIT{% endblock %}
+{% block title %}{% if active_section == "mine" %}Mes interventions{% else %}Historique des interventions{% endif %} · LogIT{% endblock %}
+{% block header %}{% endblock %}
 {% block content %}
+<div class="sillage sillage-reference clair clair-history">
+  <header class="sillage-top">
+    <a class="sillage-wordmark" href="{% url 'index' %}"><span class="clair-logo" aria-hidden="true"></span>LogIT</a>
+    <div class="sillage-toolbar">{% include "account_menu.html" %}</div>
+  </header>
+  {% include "register_nav.html" %}
 <section class="surface history-page">
-  <a href="{% url 'index' %}" class="button history-home">← Registre</a>
   <div class="heading history-heading">
-    <h1>Historique des interventions</h1>
-    <a class="button primary" href="{% url 'create' %}">+ Nouvelle intervention</a>
+    <h1>{% if active_section == "mine" %}Mes interventions{% else %}Historique des interventions{% endif %}</h1>
   </div>
   <form method="get" action="{% url 'history' %}" class="history-filters" aria-label="Filtrer les interventions">
     <div class="history-filter-fields">
@@ -23,14 +28,19 @@
       {% if active_filters %}<a class="button" href="{% url 'history' %}">Réinitialiser tous les filtres</a>{% endif %}
     </div>
   </form>
-  {% if active_filters %}
-    <ul class="history-chips" aria-label="Filtres actifs">
-    {% for label, value, remaining in active_filters %}
-      <li><a href="{% url 'history' %}{% if remaining %}?{{ remaining }}{% endif %}" aria-label="Retirer le filtre {{ label }}">{{ label }} · {{ value }} <span aria-hidden="true">×</span></a></li>
-    {% endfor %}
-    </ul>
-  {% endif %}
-  <h2>{{ page.paginator.count }} résultat{{ page.paginator.count|pluralize }}</h2>
+  <div class="history-result-bar">
+    <div>
+      <h2>{{ page.paginator.count }} résultat{{ page.paginator.count|pluralize }}</h2>
+      {% if page.has_other_pages %}<p class="muted">Interventions {{ page.start_index }} à {{ page.end_index }}</p>{% endif %}
+    </div>
+    {% if active_filters %}
+      <ul class="history-chips" aria-label="Filtres actifs">
+      {% for label, value, remaining in active_filters %}
+        <li><a class="button" href="{% url 'history' %}{% if remaining %}?{{ remaining }}{% endif %}" aria-label="Retirer le filtre {{ label }} ({{ value }})">{{ label }} · {{ value }} <span aria-hidden="true">×</span></a></li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
   {% if page.object_list %}
     <div class="history-workspace">
     <div class="history-list">
@@ -38,7 +48,7 @@
     <ul class="history-results">
     {% for item in page %}
       <li>
-        <a class="history-row" href="{% url 'detail' item.pk %}?{{ detail_query }}" data-preview-url="?{{ panel_query }}&amp;fiche={{ item.pk }}"{% if preview.pk == item.pk %} aria-current="true"{% endif %}>
+        <a id="result-{{ item.pk }}" class="history-row" href="{% url 'detail' item.pk %}?{{ detail_query }}#fiche" data-preview-url="?{{ panel_query }}&amp;fiche={{ item.pk }}"{% if preview.pk == item.pk %} aria-current="true"{% endif %}>
           <strong>{{ item.title }}</strong>
           <time datetime="{{ item.occurred_at|date:'c' }}"><span class="visually-hidden">Date </span>{{ item.occurred_at|date:"d/m/Y · H:i" }}</time>
           <span><span class="visually-hidden">Équipement </span>{{ item.equipment }}</span>
@@ -66,4 +76,5 @@
     <p>{% if filters.errors %}Corrige les filtres signalés pour afficher les résultats.{% else %}Aucune intervention ne correspond à ces critères.{% endif %}</p>
   {% endif %}
 </section>
+</div>
 {% endblock %}

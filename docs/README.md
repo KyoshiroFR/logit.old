@@ -50,7 +50,7 @@ Les miniatures sont affichées avant enregistrement. Retirer une miniature écar
 
 Dans Clair-obscur, les champs facultatifs « état avant » et « état après » alimentent la comparaison. L’onglet « Carte des impacts » relie le changement à son équipement, au service principal et aux services concernés sélectionnés dans la fiche. Le filtre Service couvre ces deux types de rattachement.
 
-Le registre affiche les cinq dernières interventions. Les recherches et filtres ouvrent `/historique/`, paginé à 20 résultats. Depuis une fiche ouverte dans ces résultats, « Retour aux résultats » conserve la page et les filtres.
+Le registre affiche les cinq dernières interventions. Les recherches et filtres ouvrent `/historique/`, paginé à 20 résultats. « Mes interventions » applique le filtre du compte connecté et devient la seule entrée active du menu. « Historique » ouvre la liste complète. Chaque pastille permet de retirer un filtre. Depuis une fiche ouverte dans ces résultats, « Retour aux résultats » rétablit la page, les critères et la ligne d’origine.
 Sur ordinateur, la sélection d’une ligne ouvre un panneau de lecture à droite. Les boutons précédent et suivant parcourent les résultats de la page courante sans déplacer la liste. Sur mobile, la ligne ouvre directement la fiche complète.
 La recherche couvre le titre, la modification, la référence technique, le nom de l’équipement et les noms des services principal et concernés, y compris lorsque ces référentiels ont été archivés.
 

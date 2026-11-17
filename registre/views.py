@@ -145,6 +145,7 @@ def history(request):
     items = Intervention.objects.select_related("author", "equipment", "service")
     items = filter_interventions(items, filters) if filters.is_valid() else items.none()
     params = history_query(request.GET, include_page=False)
+    personal = params.get("author") == str(request.user.pk)
     page = Paginator(items, 20).get_page(request.GET.get("page"))
     active_filters = []
     for field in filters:
@@ -165,6 +166,7 @@ def history(request):
     context = {
         "filters": filters, "page": page, "query": params.urlencode(),
         "active_filters": active_filters, "detail_query": detail_params.urlencode(),
+        "active_section": "mine" if personal else "history",
         "panel_query": panel_query, "preview": selected,
         "previous_preview": results[selected_index - 1] if selected_index is not None and selected_index > 0 else None,
         "next_preview": results[selected_index + 1] if selected_index is not None and selected_index + 1 < len(results) else None,
@@ -186,6 +188,9 @@ def index(request, pk=None):
     recent = list(items[:5])
     selected = get_object_or_404(items, pk=pk) if pk is not None else next(iter(recent), None)
     from_history = request.GET.get("from") == "history"
+    active_section = "register"
+    if from_history:
+        active_section = "mine" if params.get("author") == str(request.user.pk) else "history"
     detail_params = params.copy()
     if from_history:
         detail_params["from"] = "history"
@@ -194,7 +199,7 @@ def index(request, pk=None):
         services.insert(0, selected.service)
     before_lines, after_lines = configuration_lines(selected.before_state, selected.after_state) if selected else ([], [])
     return render(request, "index.html", {
-        "filters": filters, "recent": recent, "selected": selected,
+        "filters": filters, "recent": recent, "selected": selected, "active_section": active_section,
         "from_history": from_history, "return_query": params.urlencode(),
         "detail_query": detail_params.urlencode() if from_history else "",
         "revisions": selected.revisions.select_related("editor") if selected else [],

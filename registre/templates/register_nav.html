@@ -1,0 +1,6 @@
+<nav class="sillage-nav" aria-label="Navigation principale">
+  <a class="button sillage-nav-link" href="{% url 'index' %}"{% if active_section == "register" %} aria-current="page"{% endif %}><span aria-hidden="true">▤</span> Registre</a>
+  <a class="button sillage-nav-link" href="{% url 'history' %}"{% if active_section == "history" %} aria-current="page"{% endif %}><span aria-hidden="true">◷</span> Historique</a>
+  <a class="button sillage-nav-link" href="{% url 'history' %}?author={{ user.pk }}"{% if active_section == "mine" %} aria-current="page"{% endif %}><span aria-hidden="true">▧</span> Mes interventions</a>
+  <a class="button sillage-nav-link" href="{% url 'create' %}"><span aria-hidden="true">＋</span> Nouvelle fiche</a>
+</nav>

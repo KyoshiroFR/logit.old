@@ -280,6 +280,9 @@ class RegistreTests(TestCase):
         self.assertEqual(filtered.context["page"].paginator.count, 1)
         detail = self.client.get(f"/interventions/{item.pk}/", secure=True)
         self.assertEqual(detail.context["impact_services"], [intranet, vpn])
+        self.assertContains(detail, f'<li class="prisme-node prisme-primary-service"><span>Service principal</span><strong>{vpn.name}</strong></li>', html=True)
+        self.assertContains(detail, f'<li class="prisme-node"><span>Service concerné</span><strong>{intranet.name}</strong></li>', html=True)
+        self.assertNotContains(detail, f'<li class="prisme-node"><span>Service concerné</span><strong>{vpn.name}</strong></li>', html=True)
         self.assertContains(detail, 'class="removed"')
         self.assertContains(detail, 'class="changed"')
 
@@ -294,6 +297,7 @@ class RegistreTests(TestCase):
 
     def test_historique_filtre_pagine_et_retour(self):
         member = get_user_model().objects.create_user("lea")
+        colleague = get_user_model().objects.create_user("sam")
         firewall = Equipment.objects.create(name="Pare-feu")
         self.client.force_login(member)
         Intervention.objects.bulk_create([
@@ -301,8 +305,19 @@ class RegistreTests(TestCase):
             for index in range(50)
         ])
         Intervention.objects.create(title="DNS", equipment=firewall, author=member)
-        filters = {"q": "VPN", "equipment": firewall.pk}
+        Intervention.objects.create(title="VPN équipe", equipment=firewall, author=colleague)
+        filters = {"q": "VPN", "equipment": firewall.pk, "author": member.pk}
         history = "/historique/"
+        full = self.client.get(history, secure=True)
+        self.assertEqual(full.context["page"].paginator.count, 52)
+        self.assertContains(full, 'href="/historique/" aria-current="page"', count=1)
+        self.assertContains(full, 'aria-current="page"', count=1)
+        other = self.client.get(history, {"author": colleague.pk}, secure=True)
+        self.assertContains(other, "1 résultat")
+        self.assertContains(other, 'href="/historique/" aria-current="page"', count=1)
+        empty = self.client.get(history, {"author": member.pk, "q": "inconnu"}, secure=True)
+        self.assertContains(empty, "Aucune intervention ne correspond à ces critères.")
+        self.assertContains(empty, f'href="/historique/?author={member.pk}" aria-current="page"', count=1)
         for number, count in ((1, 20), (2, 20), (3, 10)):
             response = self.client.get(history, {**filters, "page": number}, secure=True)
             page = response.context["page"]
@@ -310,6 +325,9 @@ class RegistreTests(TestCase):
             self.assertEqual(len(page.object_list), count)
             self.assertEqual(page.number, number)
         second = self.client.get(history, {**filters, "page": 2}, secure=True)
+        self.assertContains(second, f'href="/historique/?author={member.pk}" aria-current="page"', count=1)
+        self.assertContains(second, 'aria-current="page"', count=1)
+        self.assertContains(second, "Interventions 21 à 40")
         self.assertEqual(second.context["page"].object_list[0].title, "VPN 29")
         item = second.context["page"].object_list[0]
         preview = self.client.get(history, {**filters, "page": 2, "fiche": item.pk}, secure=True, headers={"X-LogIT-Preview": "1"})
@@ -321,9 +339,9 @@ class RegistreTests(TestCase):
             self.client.get(history, {**filters, "page": 1, "fiche": item.pk}, secure=True, headers={"X-LogIT-Preview": "1"}).status_code,
             404,
         )
-        self.assertContains(second, f'href="/historique/?equipment={firewall.pk}"')
+        self.assertContains(second, f'href="/historique/?equipment={firewall.pk}&amp;author={member.pk}"')
         detail = self.client.get(f"/interventions/{item.pk}/", {**filters, "page": 2, "from": "history"}, secure=True)
-        self.assertContains(detail, f'href="/historique/?q=VPN&amp;equipment={firewall.pk}&amp;page=2"')
+        self.assertContains(detail, f'href="/historique/?q=VPN&amp;equipment={firewall.pk}&amp;author={member.pk}&amp;page=2#result-{item.pk}"')
         self.assertContains(detail, "Retour aux résultats")
         self.assertEqual(len(self.client.get("/", secure=True).context["recent"]), 5)
 

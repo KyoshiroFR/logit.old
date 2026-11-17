@@ -1,6 +1,8 @@
+import json
+
 from django import forms
 from django.contrib import admin
-from django.contrib.admin.models import LogEntry
+from django.contrib.admin.models import ADDITION, CHANGE, DELETION, LogEntry
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import GroupAdmin, UserAdmin
 from django.contrib.auth.models import Group
@@ -136,6 +138,49 @@ class AuditFilters(forms.Form):
         return cleaned
 
 
+AUDIT_ACTIONS = {
+    ADDITION: ("add", "Ajout"),
+    CHANGE: ("change", "Modification"),
+    DELETION: ("delete", "Suppression"),
+}
+REFERENCE_ACTIONS = {
+    "Archivage": ("archive", "Archivage"),
+    "Archivé": ("archive", "Archivage"),
+    "Réactivation": ("restore", "Réactivation"),
+    "Réactivé": ("restore", "Réactivation"),
+}
+
+
+def reference_audit_action(entry):
+    message = entry.change_message
+    if message in REFERENCE_ACTIONS:
+        return REFERENCE_ACTIONS[message], ""
+    if message.startswith("["):
+        try:
+            changes = json.loads(message)
+        except ValueError:
+            return None
+        for change in changes:
+            fields = change.get("changed", {}).get("fields", [])
+            for field in fields:
+                if field in REFERENCE_ACTIONS:
+                    detail = entry.get_change_message() if len(changes) > 1 or len(fields) > 1 else ""
+                    return REFERENCE_ACTIONS[field], detail
+    return None
+
+
+def audit_row(entry):
+    action = None
+    content_type = entry.content_type
+    if (entry.is_change() and content_type and content_type.app_label == "registre"
+            and content_type.model in {"equipment", "service"}):
+        action = reference_audit_action(entry)
+    if action is None:
+        action = AUDIT_ACTIONS.get(entry.action_flag, ("change", "Action")), entry.get_change_message()
+    (kind, label), detail = action
+    return {"entry": entry, "kind": kind, "label": label, "detail": detail}
+
+
 def audit_log(request):
     if not request.user.is_superuser:
         raise PermissionDenied
@@ -153,4 +198,5 @@ def audit_log(request):
     return render(request, "admin/audit_log.html", {
         **admin.site.each_context(request),
         "title": "Journal d’administration", "filters": filters, "page": page, "query": query.urlencode(),
+        "rows": [audit_row(entry) for entry in page],
     })

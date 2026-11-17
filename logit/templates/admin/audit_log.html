@@ -12,23 +12,34 @@
     <a class="admin-pill" href="{% url 'admin_audit' %}">Réinitialiser</a>
   </div>
 </form>
-<h2>{{ page.paginator.count }} action{{ page.paginator.count|pluralize }}</h2>
-{% if page.object_list %}
-<ul class="audit-entries">
-  {% for entry in page %}
-  <li>
-    <div>
-      <strong>{{ entry.object_repr }}</strong>
-      <p>{% if entry.is_addition %}Ajout{% elif entry.is_change %}Modification{% elif entry.is_deletion %}Suppression{% endif %}{% if entry.content_type %} · {{ entry.content_type.name }}{% endif %}</p>
-      {% if entry.change_message %}<p>{{ entry.get_change_message }}</p>{% endif %}
-    </div>
-    <div>
-      <span>{{ entry.user.get_username }}</span>
-      <time datetime="{{ entry.action_time|date:'c' }}">{{ entry.action_time|date:"d/m/Y · H:i" }}</time>
-    </div>
-  </li>
-  {% endfor %}
-</ul>
+<h2 id="audit-results" class="audit-total">{{ page.paginator.count }} action{{ page.paginator.count|pluralize }}</h2>
+{% if rows %}
+<div class="audit-table-scroll" tabindex="0" role="region" aria-labelledby="audit-results">
+  <table class="audit-entries" aria-labelledby="audit-results">
+    <thead>
+      <tr>
+        <th scope="col">Action</th>
+        <th scope="col">Objet</th>
+        <th scope="col">Auteur</th>
+        <th scope="col">Date et heure</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}{% with entry=row.entry %}
+      <tr>
+        <td><span class="audit-action audit-{{ row.kind }}">{{ row.label }}</span></td>
+        <td>
+          <strong>{{ entry.object_repr }}</strong>
+          {% if entry.content_type %}<span class="audit-object-type">{{ entry.content_type.name|capfirst }}</span>{% endif %}
+          {% if row.detail %}<p class="audit-detail">{{ row.detail }}</p>{% endif %}
+        </td>
+        <td>{{ entry.user.get_username }}</td>
+        <td><time datetime="{{ entry.action_time|date:'c' }}">{{ entry.action_time|date:"d/m/Y" }}<span>{{ entry.action_time|date:"H:i:s" }}</span></time></td>
+      </tr>
+      {% endwith %}{% endfor %}
+    </tbody>
+  </table>
+</div>
 {% if page.has_other_pages %}
 <nav class="audit-pagination" aria-label="Pagination du journal">
   {% if page.has_previous %}<a class="admin-pill" href="?{% if query %}{{ query }}&amp;{% endif %}page={{ page.previous_page_number }}">Précédente</a>{% endif %}

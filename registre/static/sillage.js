@@ -58,9 +58,10 @@ if (sectionNavigation) {
 const map = document.querySelector(".clair-map");
 if (map) {
     const graph = map.querySelector(".prisme-graph");
-    const source = graph.querySelector(".prisme-node");
+    const source = graph.querySelector(".prisme-change");
     const equipment = graph.querySelector(".prisme-equipment");
-    const services = [...graph.querySelectorAll(".prisme-services li")];
+    const serviceGroup = graph.querySelector(".prisme-services");
+    const services = serviceGroup ? [...serviceGroup.querySelectorAll("li")] : [];
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "prisme-links");
     svg.setAttribute("aria-hidden", "true");
@@ -83,27 +84,31 @@ if (map) {
                 : [(outgoing ? box.right : box.left) - rect.left, box.top - rect.top + box.height / 2];
         }
 
-        function connect(start, finish) {
+        function connect(start, finish, emphasized = false) {
             const [x1, y1] = start;
             const [x2, y2] = finish;
             const mx = (x1 + x2) / 2;
             const my = (y1 + y2) / 2;
             const path = document.createElementNS(svg.namespaceURI, "path");
+            if (emphasized) path.classList.add("prisme-link-primary");
             path.setAttribute("d", vertical
                 ? `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`
                 : `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`);
             svg.append(path);
             const dot = document.createElementNS(svg.namespaceURI, "circle");
+            if (emphasized) dot.classList.add("prisme-link-primary");
             dot.setAttribute("cx", x2);
             dot.setAttribute("cy", y2);
             dot.setAttribute("r", 3);
             svg.append(dot);
         }
-        connect(point(source, true), point(equipment, false));
-        if (vertical && services.length) {
-            connect(point(equipment, true), point(graph.querySelector(".prisme-services"), false));
+        connect(point(source, true), point(equipment, false), true);
+        if (vertical && serviceGroup) {
+            connect(point(equipment, true), point(serviceGroup, false));
         } else {
-            for (const service of services) connect(point(equipment, true), point(service, false));
+            for (const service of services) {
+                connect(point(equipment, true), point(service, false), service.classList.contains("prisme-primary-service"));
+            }
         }
     }
 

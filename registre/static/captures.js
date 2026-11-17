@@ -1,12 +1,10 @@
 const input = document.querySelector("#id_attachments");
-const form = input.form;
 const list = document.querySelector("#pending-captures");
 const status = document.querySelector("#capture-status");
 let pending = [];
 let previews = [];
 
 function update(files) {
-    input.closest("details").open = true;
     if (files.length > 10) {
         status.textContent = "Tu peux ajouter jusqu’à 10 captures.";
         return;
@@ -41,7 +39,8 @@ function update(files) {
         list.append(row);
     }
     input.files = transfer.files;
-    status.textContent = pending.length ? pending.length + " capture(s) à enregistrer." : "";
+    const noun = pending.length === 1 ? "capture" : "captures";
+    status.textContent = pending.length ? `${pending.length} ${noun} à enregistrer.` : "";
 }
 
 input.addEventListener("change", () => {
@@ -54,7 +53,7 @@ input.addEventListener("change", () => {
     update([...pending, ...chosen]);
 });
 
-form.addEventListener("paste", event => {
+document.addEventListener("paste", event => {
     const images = [...(event.clipboardData?.files ?? [])].filter(file => file.type.startsWith("image/"));
     if (!images.length) return;
     event.preventDefault();

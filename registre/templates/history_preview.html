@@ -17,7 +17,7 @@
       <div><dt>Retour arrière</dt><dd>{{ preview.rollback }}</dd></div>
       {% if preview.reference %}<div><dt>Référence technique</dt><dd>{{ preview.reference }}</dd></div>{% endif %}
     </dl>
-    <a class="button primary" href="{% url 'detail' preview.pk %}?{{ detail_query }}">Ouvrir la fiche complète</a>
+    <a class="button primary" href="{% url 'detail' preview.pk %}?{{ detail_query }}#fiche">Ouvrir la fiche complète</a>
   </article>
 {% else %}
   <p class="preview-placeholder">Sélectionne une intervention pour lire sa fiche ici.</p>
