@@ -53,6 +53,12 @@ body:has(.intervention-form) :is(main, .bar-inner) {
 }
 html:has(.intervention-form) { scroll-padding-bottom: 78px; }
 .service-picker > span { display: block; margin-bottom: 5px; color: #3d2649; }
+.services-disclosure { padding: 0; border: 0; }
+.services-disclosure > summary {
+  width: fit-content; padding: 8px 14px; border-radius: 999px;
+  background: #eedcf0; color: #4a2356; border: 1px solid #d9bfdc;
+}
+.services-disclosure > summary:hover { background: #e8cdea; }
 .service-picker .services-search { margin-bottom: 8px; }
 .services-selected { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .services-selected button {
@@ -61,9 +67,8 @@ html:has(.intervention-form) { scroll-padding-bottom: 78px; }
 }
 .services-selected button:hover { background: #e1c0e7; }
 .services-options {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  display: grid; grid-template-columns: minmax(0, 1fr);
   gap: 5px; padding: 6px; border: 1px solid #e1d0de; border-radius: 14px;
-  max-height: 180px; overflow: auto; scrollbar-color: #a77bb4 #f3e3ef;
 }
 .services-options label { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 9px; margin: 0; cursor: pointer; }
 .services-options label:has(input:checked) { background: #f0dff2; }

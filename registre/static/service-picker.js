@@ -1,4 +1,5 @@
 const picker = document.querySelector(".service-picker");
+const serviceDisclosure = picker.querySelector(".services-disclosure");
 const serviceSearch = picker.querySelector(".services-search");
 const selectedServices = picker.querySelector(".services-selected");
 const serviceOptions = [...picker.querySelectorAll(".services-options label")];
@@ -29,7 +30,7 @@ function showSelectedServices() {
         chip.addEventListener("click", () => {
             checkbox.checked = false;
             showSelectedServices();
-            serviceSearch.focus();
+            (serviceDisclosure.open ? serviceSearch : serviceDisclosure.querySelector("summary")).focus();
         });
         selectedServices.append(chip);
     }
@@ -40,6 +41,12 @@ serviceSearch.hidden = !serviceOptions.length;
 serviceSearch.addEventListener("input", filterServices);
 serviceSearch.addEventListener("keydown", event => {
     if (event.key === "Enter") event.preventDefault();
+});
+serviceDisclosure.addEventListener("keydown", event => {
+    if (event.key === "Escape" && serviceDisclosure.open) {
+        serviceDisclosure.open = false;
+        serviceDisclosure.querySelector("summary").focus();
+    }
 });
 picker.addEventListener("change", showSelectedServices);
 window.addEventListener("pageshow", showSelectedServices);
