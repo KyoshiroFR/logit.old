@@ -33,6 +33,8 @@ Pour une utilisation dans le navigateur, faire approuver ce certificat d’autor
 
 Dans l’administration, créer les comptes nominatifs et les équipements avant la première saisie. Les comptes ordinaires ont accès au registre et à la correction des fiches. L’administration gère les comptes et les référentiels. Les corrections sont horodatées et conservent les valeurs avant et après.
 
+Dans les listes Équipements et Services, les actions Archiver et Réactiver modifient la disponibilité dans les nouvelles fiches. Les fiches existantes gardent leurs rattachements, et les éléments archivés restent disponibles dans les filtres de l’historique. Les superutilisateurs consultent le journal d’administration et le filtrent par auteur et par période. Il utilise les entrées Django, avec les créations, modifications, suppressions, archivages et réactivations enregistrés dans l’administration.
+
 ## Contrôles récurrents
 
 Dans un formulaire d’intervention, coller une capture avec Ctrl+V ou sélectionner des fichiers. Les images PNG, JPEG et WebP font au plus 5 Mo chacune, avec un maximum de 10 par fiche. Elles sont consultables après connexion et stockées dans la base SQLite, donc incluses dans sa sauvegarde.

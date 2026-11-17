@@ -1,8 +1,12 @@
 from io import BytesIO
 
 from django.contrib.auth import get_user_model
+from django.contrib.admin.models import CHANGE, LogEntry
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from django.utils import timezone
+from datetime import timedelta
 from PIL import Image
 
 from .models import Attachment, Equipment, Intervention, Revision, Service
@@ -10,6 +14,51 @@ from .views import configuration_lines
 
 
 class RegistreTests(TestCase):
+    def test_archivage_reactivation_et_journal_admin(self):
+        users = get_user_model()
+        admin = users.objects.create_superuser("admin")
+        staff = users.objects.create_user("staff", is_staff=True)
+        self.client.force_login(admin)
+        equipment = Equipment.objects.create(name="Pare-feu historique")
+        service = Service.objects.create(name="VPN historique")
+        item = Intervention.objects.create(title="Intervention historique", equipment=equipment, service=service, author=admin)
+        item.impacted_services.add(service)
+        references = (("equipment", equipment), ("service", service))
+        for model, reference in references:
+            path = f"/administration/registre/{model}/"
+            self.assertEqual(self.client.post(path, {"action": "archive", "_selected_action": reference.pk, "index": 0}, secure=True).status_code, 302)
+            reference.refresh_from_db()
+            self.assertTrue(reference.archived)
+        creation = self.client.get("/interventions/nouvelle/", secure=True).context["form"]
+        self.assertFalse(creation.fields["equipment"].queryset.exists())
+        self.assertFalse(creation.fields["service"].queryset.exists())
+        self.assertFalse(creation.fields["impacted_services"].queryset.exists())
+        correction = self.client.get(f"/interventions/{item.pk}/corriger/", secure=True).context["form"]
+        self.assertEqual(list(correction.fields["equipment"].queryset), [equipment])
+        self.assertEqual(list(correction.fields["service"].queryset), [service])
+        self.assertEqual(list(correction.fields["impacted_services"].queryset), [service])
+        self.assertContains(self.client.get("/historique/", {"equipment": equipment.pk}, secure=True), item.title)
+        journal = "/administration/journal/"
+        today = timezone.localdate()
+        other_entry = LogEntry.objects.create(
+            user=staff, object_repr="Autre auteur", action_flag=CHANGE,
+            content_type=ContentType.objects.get_for_model(Equipment),
+        )
+        LogEntry.objects.filter(pk=other_entry.pk).update(action_time=timezone.now() - timedelta(days=2))
+        response = self.client.get(journal, {"author": admin.pk, "start": today, "end": today}, secure=True)
+        self.assertContains(response, "2 actions")
+        self.assertContains(response, "Archivage", count=2)
+        self.assertNotContains(response, "Autre auteur")
+        self.assertContains(self.client.get(journal, {"author": staff.pk}, secure=True), "Autre auteur")
+        for model, reference in references:
+            path = f"/administration/registre/{model}/"
+            self.assertEqual(self.client.post(path, {"action": "restore", "_selected_action": reference.pk, "index": 0}, secure=True).status_code, 302)
+            reference.refresh_from_db()
+            self.assertFalse(reference.archived)
+        self.assertContains(self.client.get(journal, secure=True), "Réactivation", count=2)
+        self.client.force_login(staff)
+        self.assertEqual(self.client.get(journal, secure=True).status_code, 403)
+
     def test_diff_conserve_les_lignes_et_leurs_numeros(self):
         old = [f'ligne "{number}"' for number in range(1, 41)]
         new = old.copy()

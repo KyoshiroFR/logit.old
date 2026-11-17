@@ -113,6 +113,24 @@ body.login #container { border-radius: 24px; overflow: hidden; box-shadow: 0 5px
 .admin-activity { margin-top: 16px; }
 .admin-activity p { margin: 0; color: #614d65; }
 .admin-activity time { color: #614d65; }
+.audit-heading, .audit-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.audit-heading h2 { margin: 0; }
+.audit-filters { padding: 15px; border-radius: 17px; background: #f2e5ef; margin-bottom: 18px; }
+.audit-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px; margin-bottom: 12px; }
+.audit-fields label { display: block; margin-bottom: 5px; }
+.audit-fields :is(select,input) { box-sizing: border-box; min-height: 38px; width: 100%; background: #fcf3f5; color: #2f1938; }
+.audit-entries { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.audit-entries li { list-style: none; display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 9px; padding: 13px; border-radius: 15px; background: #f2e5ef; overflow-wrap: anywhere; }
+.audit-entries li p { padding: 0; margin: 3px 0 0; color: #614d65; }
+.audit-entries time { display: block; color: #614d65; }
+.audit-pagination { margin: 14px 0 0; justify-content: center; }
 #content select { scrollbar-color: #a77bb4 #f3e3ef; }
 #content select option { background: #f3e3ef; color: #2f1938; }
 @supports (appearance: base-select) and selector(select::picker(select)) {

@@ -74,6 +74,19 @@ class InterventionForm(forms.ModelForm):
         exclude = ["author"]
         widgets = {"occurred_at": forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"})}
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        equipment = Q(archived=False)
+        service = Q(archived=False)
+        impacted = Q(archived=False)
+        if self.instance.pk:
+            equipment |= Q(pk=self.instance.equipment_id)
+            service |= Q(pk=self.instance.service_id)
+            impacted |= Q(pk__in=self.instance.impacted_services.values("pk"))
+        self.fields["equipment"].queryset = Equipment.objects.filter(equipment)
+        self.fields["service"].queryset = Service.objects.filter(service)
+        self.fields["impacted_services"].queryset = Service.objects.filter(impacted)
+
 
 class CorrectionForm(InterventionForm):
     correction_reason = forms.CharField(label="Motif de la correction", max_length=250)

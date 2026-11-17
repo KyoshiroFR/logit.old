@@ -5,6 +5,7 @@ from django.utils import timezone
 
 class Equipment(models.Model):
     name = models.CharField("nom", max_length=120, unique=True)
+    archived = models.BooleanField("archivé", default=False)
 
     def __str__(self):
         return self.name
@@ -16,6 +17,7 @@ class Equipment(models.Model):
 
 class Service(models.Model):
     name = models.CharField("nom", max_length=120, unique=True)
+    archived = models.BooleanField("archivé", default=False)
 
     def __str__(self):
         return self.name
