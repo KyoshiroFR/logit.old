@@ -147,6 +147,7 @@
     </dl>
     <a class="button primary" href="#retour-arriere" data-show-detail>↶ &nbsp; Retour arrière</a>
     <a class="button" href="{% url 'edit' selected.pk %}{% if detail_query %}?{{ detail_query }}{% endif %}">Corriger</a>
+    <a class="button" href="{% url 'reuse' selected.pk %}">Créer à partir de cette fiche</a>
   </aside>
   {% endif %}
 </div>

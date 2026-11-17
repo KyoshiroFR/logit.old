@@ -15,6 +15,7 @@ urlpatterns = [
     path("interventions/nouvelle/", views.edit, name="create"),
     path("interventions/<int:pk>/", views.index, name="detail"),
     path("interventions/<int:pk>/corriger/", views.edit, name="edit"),
+    path("interventions/<int:source_pk>/reutiliser/", views.edit, name="reuse"),
     path("captures/<int:pk>/", views.attachment, name="attachment"),
     path("connexion/", security.LogITLoginView.as_view(template_name="login.html"), name="login"),
     path("connexion/nouveau-mot-de-passe/", security.first_password, name="first_password"),

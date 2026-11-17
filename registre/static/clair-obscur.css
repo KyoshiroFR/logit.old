@@ -84,7 +84,7 @@ html:has(.intervention-form) { scroll-padding-bottom: 78px; }
     align-items: start;
   }
   .intervention-form .form > :not(.form-side) { grid-column: 1 / -1; }
-  .intervention-form .form > :is(fieldset, div) { margin: 0; }
+  .intervention-form .form > :is(fieldset, div, .account-notice) { margin: 0; }
 }
 .form-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .form-states textarea { font-family: Consolas, monospace; min-height: 132px; }

@@ -18,6 +18,46 @@ from .views import configuration_lines
 
 
 class RegistreTests(TestCase):
+    def test_reutilisation_reprend_le_contexte_sans_les_preuves(self):
+        users = get_user_model()
+        author = users.objects.create_user("auteur-source")
+        reader = users.objects.create_user("nouvel-auteur")
+        equipment = Equipment.objects.create(name="Pare-feu")
+        vpn = Service.objects.create(name="VPN")
+        archived = Service.objects.create(name="Service archivé", archived=True)
+        source = Intervention.objects.create(
+            title="Modification VPN", author=author, equipment=equipment, service=vpn,
+            occurred_at=timezone.now() - timedelta(days=7), change="Modification de règle",
+            reason="Maintenance", impact="Accès distant", rollback="Restaurer la règle",
+            verification="Ancien test", reference="ANCIENNE-REF", before_state="Avant", after_state="Après",
+        )
+        source.impacted_services.set([vpn, archived])
+        Attachment.objects.create(intervention=source, uploader=author, name="ancienne.png", content_type="image/png", data=b"image")
+        self.client.force_login(reader)
+        url = f"/interventions/{source.pk}/reutiliser/"
+        response = self.client.get(url, secure=True)
+        form = response.context["form"]
+        self.assertEqual(form["equipment"].value(), equipment.pk)
+        self.assertEqual(form["service"].value(), vpn.pk)
+        self.assertEqual(form["impacted_services"].value(), [vpn.pk])
+        self.assertGreater(form["occurred_at"].value(), timezone.make_naive(source.occurred_at))
+        for field in ("verification", "reference", "before_state", "after_state", "attachments"):
+            self.assertFalse(form[field].value(), field)
+        payload = {
+            key: form[key].value()
+            for key in ("title", "equipment", "service", "impacted_services", "change", "reason", "impact", "rollback")
+        }
+        payload.update(occurred_at=timezone.localtime().strftime("%Y-%m-%dT%H:%M"), verification="Nouveau test")
+        self.assertEqual(self.client.post(url, payload, secure=True).status_code, 302)
+        copy = Intervention.objects.exclude(pk=source.pk).get()
+        self.assertEqual(copy.author, reader)
+        self.assertEqual(copy.verification, "Nouveau test")
+        self.assertFalse(copy.attachments.exists())
+        self.assertEqual(list(copy.impacted_services.all()), [vpn])
+        source.refresh_from_db()
+        self.assertEqual(source.verification, "Ancien test")
+        self.assertEqual(source.attachments.count(), 1)
+
     def test_premiere_connexion_mot_de_passe_et_totp_obligatoires(self):
         users = get_user_model()
         admin = users.objects.create_superuser("gestion")

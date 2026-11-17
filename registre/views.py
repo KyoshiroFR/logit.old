@@ -189,7 +189,22 @@ def index(request, pk=None):
 
 
 @login_required
-def edit(request, pk=None):
+def edit(request, pk=None, source_pk=None):
+    source = None
+    initial = {}
+    if source_pk is not None:
+        source = get_object_or_404(Intervention.objects.select_related("equipment", "service"), pk=source_pk)
+        if request.method == "GET":
+            initial = {
+                "title": source.title,
+                "equipment": None if source.equipment.archived else source.equipment_id,
+                "service": source.service_id if source.service and not source.service.archived else None,
+                "impacted_services": list(source.impacted_services.filter(archived=False).values_list("pk", flat=True)),
+                "change": source.change,
+                "reason": source.reason,
+                "impact": source.impact,
+                "rollback": source.rollback,
+            }
     with transaction.atomic():
         item = get_object_or_404(Intervention, pk=pk) if pk is not None else Intervention(author=request.user)
         form_type = CorrectionForm if pk is not None else InterventionForm
@@ -197,6 +212,7 @@ def edit(request, pk=None):
             request.POST if request.method == "POST" else None,
             request.FILES if request.method == "POST" else None,
             instance=item,
+            initial=initial,
         )
         before = item.snapshot() if pk is not None else {}
         if request.method == "POST" and form.is_valid():
@@ -204,7 +220,7 @@ def edit(request, pk=None):
             existing_count = item.attachments.count() if item.pk else 0
             if existing_count + len(images) > 10:
                 form.add_error("attachments", "Une fiche peut contenir au plus 10 images.")
-                return render(request, "edit.html", {"form": form, "item": item})
+                return render(request, "edit.html", {"form": form, "item": item, "source": source})
             item = form.save()
             for image in images:
                 image.intervention = item
@@ -231,7 +247,7 @@ def edit(request, pk=None):
                 params["from"] = "history"
                 url += "?" + params.urlencode()
             return redirect(url)
-    return render(request, "edit.html", {"form": form, "item": item})
+    return render(request, "edit.html", {"form": form, "item": item, "source": source})
 
 
 @login_required

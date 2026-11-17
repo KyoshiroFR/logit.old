@@ -41,6 +41,8 @@ Dans les listes Équipements et Services, les actions Archiver et Réactiver mod
 
 ## Contrôles récurrents
 
+« Créer à partir de cette fiche » préremplit le titre, le contexte, le retour arrière et les référentiels actifs. La date, les vérifications, la référence technique, les états avant/après et les captures restent propres à la nouvelle intervention.
+
 Dans un formulaire d’intervention, coller une capture avec Ctrl+V ou sélectionner des fichiers. Les images PNG, JPEG et WebP font au plus 5 Mo chacune, avec un maximum de 10 par fiche. Elles sont consultables après connexion et stockées dans la base SQLite, donc incluses dans sa sauvegarde.
 Les miniatures sont affichées avant enregistrement. Retirer une miniature écarte le fichier de l’envoi.
 
