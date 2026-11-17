@@ -16,6 +16,7 @@ body:not(:has(.clair)) main > .narrow > a, body:not(:has(.clair)) .eyebrow { col
 .narrow .form { color: #2f1938; }
 .narrow .form label { color: #3d2649; }
 .narrow .form .primary { background: #701ad0; }
+.totp-qr { display: block; max-width: 100%; height: auto; margin: 0 auto 14px; border-radius: 12px; }
 .intervention-form { max-width: 1680px; }
 .intervention-form .form-back {
   display: inline-flex;

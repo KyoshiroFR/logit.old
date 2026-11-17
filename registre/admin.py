@@ -9,7 +9,7 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.shortcuts import render
 
-from .models import Equipment, Service
+from .models import AccountSecurity, Equipment, Service
 
 admin.site.site_header = "Administration LogIT"
 
@@ -40,9 +40,37 @@ user_model = get_user_model()
 admin.site.unregister([user_model, Group])
 
 
+class SecurityPolicyFormMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        policy = getattr(self.instance, "accountsecurity", None)
+        if policy:
+            self.initial["totp_required"] = policy.totp_required
+
+
+class LogITUserChangeForm(SecurityPolicyFormMixin, UserAdmin.form):
+    totp_required = forms.BooleanField(label="TOTP obligatoire", required=False)
+
+
+class LogITUserCreationForm(UserAdmin.add_form):
+    totp_required = forms.BooleanField(label="TOTP obligatoire", required=False)
+
+
 @admin.register(user_model)
 class LogITUserAdmin(RetainedAdmin, AccessManagementAdmin, UserAdmin):
-    pass
+    form = LogITUserChangeForm
+    add_form = LogITUserCreationForm
+    security_fields = ("Sécurité LogIT", {"fields": ("totp_required",)})
+    fieldsets = UserAdmin.fieldsets + (security_fields,)
+    add_fieldsets = UserAdmin.add_fieldsets + (security_fields,)
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if not change or "totp_required" in form.changed_data:
+            defaults = {"totp_required": form.cleaned_data["totp_required"]}
+            if not change:
+                defaults["must_change_password"] = True
+            AccountSecurity.objects.update_or_create(user=obj, defaults=defaults)
 
 
 @admin.register(Group)

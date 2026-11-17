@@ -1,4 +1,5 @@
 from io import BytesIO
+import time
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
@@ -7,14 +8,77 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.utils import timezone
+from django_otp.oath import hotp
+from django_otp.plugins.otp_totp.models import TOTPDevice
 from datetime import timedelta
 from PIL import Image
 
-from .models import Attachment, Equipment, Intervention, Revision, Service
+from .models import AccountSecurity, Attachment, Equipment, Intervention, Revision, Service
 from .views import configuration_lines
 
 
 class RegistreTests(TestCase):
+    def test_premiere_connexion_mot_de_passe_et_totp_obligatoires(self):
+        users = get_user_model()
+        admin = users.objects.create_superuser("gestion")
+        self.client.force_login(admin)
+        temporary = "Temp_Utilisation9!Arome"
+        permanent = "Nouveau_Proteger8!Miel"
+        for username, required in (("avec-totp", True), ("sans-totp", False)):
+            fields = {"username": username, "password1": temporary, "password2": temporary, "usable_password": "true"}
+            if required:
+                fields["totp_required"] = "on"
+            response = self.client.post("/administration/auth/user/add/", fields, secure=True)
+            self.assertEqual(response.status_code, 302)
+            policy = AccountSecurity.objects.get(user__username=username)
+            self.assertTrue(policy.must_change_password)
+            self.assertEqual(policy.totp_required, required)
+
+        self.client.logout()
+        first = "/connexion/nouveau-mot-de-passe/"
+        totp = "/connexion/totp/"
+        response = self.client.post("/connexion/", {"username": "avec-totp", "password": temporary}, secure=True)
+        self.assertEqual(response.url, first)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertEqual(self.client.get(totp, secure=True).url, first)
+        self.assertContains(self.client.post(first, {"new_password1": temporary, "new_password2": temporary}, secure=True),
+                            "différent du mot de passe temporaire")
+        self.assertEqual(self.client.post(first, {"new_password1": permanent, "new_password2": permanent}, secure=True).url, totp)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertEqual(self.client.get("/historique/", secure=True).status_code, 302)
+        self.assertEqual(self.client.get("/administration/", secure=True).status_code, 302)
+        setup = self.client.get(totp, secure=True)
+        self.assertContains(setup, "QR code")
+        self.assertIn("no-store", setup["Cache-Control"])
+        device = TOTPDevice.objects.get(user__username="avec-totp")
+        self.assertFalse(device.confirmed)
+        timestep = int((time.time() - device.t0) // device.step)
+        code = str(hotp(device.bin_key, timestep, digits=device.digits)).zfill(device.digits)
+        self.assertEqual(self.client.post(totp, {"code": code}, secure=True).url, "/")
+        self.assertEqual(self.client.get("/", secure=True).status_code, 200)
+        device.refresh_from_db()
+        self.assertTrue(device.confirmed)
+        self.client.logout()
+        self.assertEqual(self.client.post("/connexion/", {"username": "avec-totp", "password": permanent}, secure=True).url, totp)
+        self.assertNotContains(self.client.get(totp, secure=True), "QR code")
+        self.assertContains(self.client.post(totp, {"code": code}, secure=True), "Code invalide")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+        self.client.logout()
+        self.assertEqual(self.client.post("/connexion/", {"username": "sans-totp", "password": temporary}, secure=True).url, first)
+        self.assertEqual(self.client.post(first, {"new_password1": permanent, "new_password2": permanent}, secure=True).url, "/")
+        self.assertEqual(self.client.get("/historique/", secure=True).status_code, 200)
+
+    def test_exigence_totp_invalide_les_sessions_actives_et_s_applique_a_admin(self):
+        admin = get_user_model().objects.create_superuser("gestion")
+        self.client.force_login(admin)
+        AccountSecurity.objects.create(user=admin, totp_required=True)
+        response = self.client.get("/administration/", secure=True)
+        self.assertEqual(response.url, "/connexion/?next=%2Fadministration%2F")
+        self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertEqual(self.client.get("/administration/login/", secure=True).url,
+                         "/connexion/?next=%2Fadministration%2F")
+
     def test_administration_preserve_les_references_et_les_auteurs(self):
         users = get_user_model()
         admin = users.objects.create_superuser("admin")

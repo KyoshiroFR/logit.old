@@ -3,6 +3,12 @@ from django.db import models
 from django.utils import timezone
 
 
+class AccountSecurity(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    must_change_password = models.BooleanField(default=False)
+    totp_required = models.BooleanField(default=False)
+
+
 class Equipment(models.Model):
     name = models.CharField("nom", max_length=120, unique=True)
     archived = models.BooleanField("archivé", default=False)
