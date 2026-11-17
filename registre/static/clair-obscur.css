@@ -17,6 +17,17 @@ body:not(:has(.clair)) main > .narrow > a, body:not(:has(.clair)) .eyebrow { col
 .narrow .form label { color: #3d2649; }
 .narrow .form .primary { background: #701ad0; }
 .intervention-form { max-width: 1680px; }
+.intervention-form .form-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 15px;
+  background: #532f60;
+  border-color: #a17ca9;
+  color: #fff1fb;
+}
+.intervention-form .form-back:hover { background: #6a3e79; }
+.intervention-form .form-back:focus-visible { outline-color: #edcfff; }
 body:has(.intervention-form) :is(main, .bar-inner) {
   max-width: 1760px;
   padding-inline: clamp(16px, 3vw, 40px);
@@ -45,7 +56,25 @@ body:has(.intervention-form) :is(main, .bar-inner) {
 .pending-captures li { padding: 6px 10px; border-radius: 14px; background: #f3e6ef; }
 .pending-captures li span { flex: 1; min-width: 0; }
 .pending-captures img { width: 76px; height: 53px; object-fit: contain; border-radius: 9px; background: #e9d7e7; }
+select { scrollbar-color: #a77bb4 #f3e3ef; }
+select option { background: #f3e3ef; color: #2f1938; }
 select[multiple] { min-height: 115px; }
+@supports (appearance: base-select) and selector(select::picker(select)) {
+  select:not([multiple], [size]), select:not([multiple], [size])::picker(select) { appearance: base-select; }
+  select:not([multiple], [size])::picker(select) {
+    margin-block: 5px;
+    max-height: min(320px, 50dvh);
+    padding: 5px;
+    border: 1px solid #dac1df;
+    border-radius: 15px;
+    background: #f3e3ef;
+    color: #2f1938;
+    box-shadow: 0 6px 20px #32193a30;
+  }
+  select:not([multiple], [size]) option { padding: 8px 11px; border-radius: 9px; }
+  select:not([multiple], [size]) option:checked { background: #e7cdec; }
+  select:not([multiple], [size]) option:is(:hover, :focus-visible) { background: #e0bee8; }
+}
 .history-page {
   --history-columns: minmax(0, 2.1fr) minmax(0, 1fr) repeat(3, minmax(0, 1fr));
   color: #2f1938;
