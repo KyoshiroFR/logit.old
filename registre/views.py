@@ -56,7 +56,9 @@ class CorrectionForm(InterventionForm):
 
 class Filters(forms.Form):
     q = forms.CharField(label="Recherche", required=False)
-    equipment = forms.ModelChoiceField(label="Équipement", queryset=Equipment.objects.all(), required=False)
+    equipment = forms.ModelChoiceField(
+        label="Équipement", queryset=Equipment.objects.all(), required=False, empty_label="Tous les équipements",
+    )
     service = forms.ModelChoiceField(label="Service", queryset=Service.objects.all(), required=False)
     author = forms.ModelChoiceField(label="Auteur", queryset=get_user_model().objects.order_by("username"), required=False)
     start = forms.DateField(label="Depuis", required=False, widget=forms.DateInput(attrs={"type": "date"}))

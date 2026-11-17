@@ -1,112 +1,138 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Registre · LogIT{% endblock %}
-{% block account_admin %}{% endblock %}
+{% block header %}{% endblock %}
 {% block content %}
-<div class="sillage">
-<nav class="sillage-nav" aria-label="Navigation principale">
-  <a class="button" href="{% url 'index' %}" aria-current="page">Registre</a>
-  <a class="button primary" href="{% url 'create' %}">+ Nouvelle intervention</a>
-  {% if user.is_staff %}<a class="button" href="{% url 'admin:index' %}">Administration</a>{% endif %}
-</nav>
-<div class="sillage-workspace">
-<div class="heading sillage-heading"><div><p class="eyebrow">Infrastructure et sécurité</p><h1>Registre des changements</h1></div>
-</div>
-<div class="layout">
-<section class="surface journal" aria-label="Interventions">
-<h2>Interventions <span class="count">{{ page.paginator.count }}</span></h2>
-<form class="filters surface" method="get" action="{% url 'index' %}" aria-label="Filtrer le registre">
-<div class="filter-row">
-  <div>{{ filters.q.as_field_group }}</div>
-  <div>{{ filters.equipment.as_field_group }}</div>
-  <div class="actions"><button type="submit">Filtrer</button>{% if query %}<a href="{% url 'index' %}">Réinitialiser</a>{% endif %}</div>
-</div>
-<details class="advanced"{% if filters.service.value or filters.author.value or filters.start.value or filters.end.value %} open{% endif %}>
-  <summary>Plus de filtres</summary>
-  <div class="advanced-fields">
-    <div>{{ filters.service.as_field_group }}</div>
-    <div>{{ filters.author.as_field_group }}</div>
-    <div>{{ filters.start.as_field_group }}</div>
-    <div>{{ filters.end.as_field_group }}</div>
-  </div>
-</details>
-</form>
-{% for item in page %}
-{% ifchanged item.occurred_at|date:"Y-m-d" %}<p class="day-label">{{ item.occurred_at|date:"l j F Y" }}</p>{% endifchanged %}
-<a class="entry" href="{% url 'detail' item.pk %}?{% if query %}{{ query }}&amp;{% endif %}page={{ page.number }}#fiche"{% if selected.pk == item.pk %} aria-current="true"{% endif %}>
-<span class="tag">{{ item.equipment }}</span><strong>{{ item.title }}</strong>
-<span class="muted">{{ item.occurred_at|date:"d M Y · H:i" }} · {{ item.author }}</span></a>
-{% empty %}<p class="muted">Aucune intervention trouvée.</p>{% endfor %}
-{% if page.has_other_pages %}<nav class="actions" aria-label="Pagination">
-{% if page.has_previous %}<a href="?{{ query }}&amp;page={{ page.previous_page_number }}">Précédente</a>{% endif %}
-<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>
-{% if page.has_next %}<a href="?{{ query }}&amp;page={{ page.next_page_number }}">Suivante</a>{% endif %}
-</nav>{% endif %}
-</section>
-{% if selected %}<article class="surface fiche" id="fiche">
-<div class="heading"><span class="tag">{{ selected.equipment }}</span><a class="button" href="{% url 'edit' selected.pk %}">Corriger</a></div>
-<h2>{{ selected.title }}</h2>
-<p class="muted">{{ selected.occurred_at|date:"d M Y à H:i" }} · {{ selected.author }}{% if selected.service %} · {{ selected.service }}{% endif %}</p>
-<nav class="fiche-tabs" aria-label="Sections de la fiche" hidden>
-  <button type="button" data-panel="fiche-detail" aria-controls="fiche-detail" aria-pressed="true">Fiche</button>
-  <button type="button" data-panel="fiche-impact" aria-controls="fiche-impact" aria-pressed="false">Carte des impacts</button>
-</nav>
-<section id="fiche-detail" aria-label="Détails de l’intervention">
-<div class="fiche-overview{% if attachments %} has-captures{% endif %}">
-<dl class="impact">
-<dt>Impact</dt><dd>{{ selected.impact }}</dd>
-</dl>
-{% if attachments %}
-<section class="fiche-captures" aria-label="Captures">
-<h3>Captures</h3>
-<div class="capture-grid">
-{% for image in attachments %}
-  <figure>
-    <a href="{% url 'attachment' image.pk %}" target="_blank" rel="noopener" aria-label="Ouvrir {{ image.name }} dans un nouvel onglet">
-      <img src="{% url 'attachment' image.pk %}" alt="{{ image.name }}" loading="lazy">
-    </a>
-    <figcaption class="muted">{{ image.name }} · {{ image.uploader }} · {{ image.uploaded_at|date:"d M Y à H:i" }}</figcaption>
-  </figure>
-{% endfor %}
-</div>
-</section>
-{% endif %}
-</div>
-<dl class="facts">
-<div>
-<dt>Modification</dt><dd>{{ selected.change }}</dd>
-</div>
-<div>
-<dt>Motif</dt><dd>{{ selected.reason }}</dd>
-</div>
-<div>
-<dt>Vérification</dt><dd>{{ selected.verification }}</dd>
-</div>
-<div>
-<dt>Retour arrière</dt><dd>{{ selected.rollback }}</dd>
-</div>
-{% if selected.reference %}<div><dt>Référence au journal technique</dt><dd>{{ selected.reference }}</dd></div>{% endif %}
-</dl>
-<h3>Historique des corrections</h3>
-{% for rev in revisions %}
-<details><summary>{{ rev.corrected_at|date:"d M Y à H:i:s" }} · {{ rev.editor }} · {{ rev.reason }}</summary>
-<dl>{% for field, values in rev.changes.items %}
-<dt>{{ field|capfirst }}</dt><dd>Avant · {{ values.before|default:"—" }}<br>Après · {{ values.after|default:"—" }}</dd>
-{% endfor %}</dl></details>
-{% empty %}<p class="muted">Aucune correction enregistrée.</p>{% endfor %}
-</section>
-<section id="fiche-impact" aria-labelledby="map-title">
-  <h3 id="map-title">Carte des impacts</h3>
-  <ol class="impact-map">
-    <li><span>Intervention</span><strong>{{ selected.title }}</strong></li>
-    <li><span>Équipement</span><strong>{{ selected.equipment }}</strong></li>
-    <li><span>Service</span><strong>{{ selected.service|default:"Aucun service renseigné" }}</strong></li>
-  </ol>
-  <dl class="impact"><dt>Impact déclaré</dt><dd>{{ selected.impact }}</dd></dl>
-</section>
-</article>{% endif %}
-</div>
-</div>
+<div class="sillage sillage-reference">
+  <header class="sillage-top">
+    <a class="sillage-wordmark" href="{% url 'index' %}">LogIT</a>
+    <div class="sillage-toolbar">
+      <div class="sillage-context"><strong>Registre</strong><span>Infrastructures et sécurité</span></div>
+      <label class="sillage-search">
+        <span class="visually-hidden">Rechercher dans le registre</span>
+        <input id="{{ filters.q.id_for_label }}" name="q" type="search" form="sillage-filters" value="{{ filters.q.value|default_if_none:'' }}" placeholder="Rechercher dans le registre…">
+      </label>
+      <details class="sillage-account">
+        <summary aria-label="Compte {{ user.get_username }}">{{ user.get_username|slice:":2"|upper }}</summary>
+        <div><p>{{ user.get_username }}</p>
+        <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Se déconnecter</button></form></div>
+      </details>
+    </div>
+  </header>
+  <nav class="sillage-nav" aria-label="Navigation principale">
+    <a class="button" href="{% url 'index' %}" aria-current="page"><span aria-hidden="true">▤</span> Registre</a>
+    <a class="button" href="{% url 'create' %}"><span aria-hidden="true">＋</span> Nouvelle intervention</a>
+    {% if user.is_staff %}<a class="button" href="{% url 'admin:index' %}"><span aria-hidden="true">⚙</span> Administration</a>{% endif %}
+  </nav>
+  <section class="surface journal" aria-label="Interventions">
+    <h1>Registre</h1>
+    <p class="muted">Journal des changements d’infrastructure et de sécurité</p>
+    <form class="sillage-filter" id="sillage-filters" method="get" action="{% url 'index' %}" aria-label="Filtrer le registre">
+      <div class="sillage-filter-row">
+        <label class="visually-hidden" for="{{ filters.equipment.id_for_label }}">Équipement</label>{{ filters.equipment }}
+        <button type="submit">Filtrer</button>
+        {% if query %}<a href="{% url 'index' %}">Réinitialiser</a>{% endif %}
+      </div>
+      {{ filters.q.errors }}{{ filters.equipment.errors }}
+      <details class="advanced"{% if filters.service.value or filters.author.value or filters.start.value or filters.end.value or filters.errors %} open{% endif %}>
+        <summary>Plus de filtres</summary>
+        <div class="advanced-fields">
+          <div>{{ filters.service.as_field_group }}</div><div>{{ filters.author.as_field_group }}</div>
+          <div>{{ filters.start.as_field_group }}</div><div>{{ filters.end.as_field_group }}</div>
+        </div>
+      </details>
+    </form>
+    <div class="sillage-events">
+      {% for item in page %}
+      <div class="sillage-event">
+        <time class="sillage-date" datetime="{{ item.occurred_at|date:'c' }}"><strong>{{ item.occurred_at|date:"d" }}</strong><span>{{ item.occurred_at|date:"M" }}</span></time>
+        <a class="entry" href="{% url 'detail' item.pk %}?{% if query %}{{ query }}&amp;{% endif %}page={{ page.number }}#fiche"{% if selected.pk == item.pk %} aria-current="true"{% endif %}>
+          <span class="sillage-mark" aria-hidden="true">▤</span>
+          <span class="sillage-entry-copy"><strong>{{ item.title }}</strong><span class="muted">{{ item.equipment }} · {{ item.author }}</span>
+          <span class="muted">#{{ item.pk }} · {{ item.occurred_at|date:"d M Y · H:i" }}</span></span>
+        </a>
+      </div>
+      {% empty %}<p class="muted">Aucune intervention trouvée.</p>{% endfor %}
+    </div>
+    {% if page.has_other_pages %}<nav class="actions" aria-label="Pagination">
+      {% if page.has_previous %}<a href="{% url 'index' %}?{{ query }}&amp;page={{ page.previous_page_number }}">Précédente</a>{% endif %}
+      <span>{{ page.number }} / {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}<a href="{% url 'index' %}?{{ query }}&amp;page={{ page.next_page_number }}">Suivante</a>{% endif %}
+    </nav>{% endif %}
+  </section>
+
+  {% if selected %}<article class="surface fiche" id="fiche">
+    <header class="sillage-record">
+      <span class="sillage-mark" aria-hidden="true">▤</span>
+      <div><h2>{{ selected.title }}</h2><p class="muted">#{{ selected.pk }} · {{ selected.occurred_at|date:"d M Y à H:i" }}</p></div>
+      <span class="tag">{{ selected.equipment }}</span>
+    </header>
+    <nav class="fiche-tabs" aria-label="Sections de la fiche" hidden>
+      <button type="button" data-panel="fiche-detail" aria-controls="fiche-detail" aria-pressed="true">Fiche</button>
+      <button type="button" data-panel="fiche-history" aria-controls="fiche-history" aria-pressed="false">Historique</button>
+      <button type="button" data-panel="fiche-impact" aria-controls="fiche-impact" aria-pressed="false">Carte des impacts</button>
+    </nav>
+    <section id="fiche-detail" aria-label="Détails de l’intervention">
+      <div class="fiche-overview">
+        <div class="sillage-summary">
+          <dl class="sillage-metadata">
+            <div><dt>Équipement</dt><dd>{{ selected.equipment }}</dd></div>
+            <div><dt>Service</dt><dd>{{ selected.service|default:"Non renseigné" }}</dd></div>
+            <div><dt>Auteur</dt><dd>{{ selected.author }}</dd></div>
+          </dl>
+          <dl class="impact"><dt>Impact</dt><dd>{{ selected.impact }}</dd></dl>
+        </div>
+        <section class="fiche-captures" aria-label="Captures">
+          <h3>Aperçu instantané</h3>
+          {% if attachments %}<div class="capture-grid">
+          {% for image in attachments %}
+            <figure>
+              <a href="{% url 'attachment' image.pk %}" target="_blank" rel="noopener" aria-label="Ouvrir {{ image.name }} dans un nouvel onglet">
+                <img src="{% url 'attachment' image.pk %}" alt="{{ image.name }}" loading="lazy">
+              </a>
+              <figcaption class="muted">{{ image.name }} · {{ image.uploader }} · {{ image.uploaded_at|date:"d M Y à H:i" }}</figcaption>
+            </figure>
+          {% endfor %}
+          </div>{% else %}
+            <div class="sillage-empty-preview"><span aria-hidden="true">▧</span><p>Aucune capture jointe</p></div>
+          {% endif %}
+        </section>
+      </div>
+      <section class="sillage-description" aria-label="Description">
+        <h3>Description</h3>
+        <dl class="facts">
+          <div><dt>Modification</dt><dd>{{ selected.change }}</dd></div>
+          <div><dt>Motif</dt><dd>{{ selected.reason }}</dd></div>
+          <div><dt>Vérification</dt><dd>{{ selected.verification }}</dd></div>
+          <div id="retour-arriere"><dt>Retour arrière</dt><dd>{{ selected.rollback }}</dd></div>
+          {% if selected.reference %}<div><dt>Référence au journal technique</dt><dd>{{ selected.reference }}</dd></div>{% endif %}
+        </dl>
+        <div class="actions sillage-record-actions">
+          <a class="button" href="#retour-arriere">Voir le retour arrière</a>
+          <a class="button primary" href="{% url 'edit' selected.pk %}">Corriger</a>
+        </div>
+      </section>
+    </section>
+    <section id="fiche-history" aria-labelledby="history-title">
+      <h3 id="history-title">Historique des corrections</h3>
+      {% for rev in revisions %}
+      <details><summary>{{ rev.corrected_at|date:"d M Y à H:i:s" }} · {{ rev.editor }} · {{ rev.reason }}</summary>
+        <dl>{% for field, values in rev.changes.items %}
+          <dt>{{ field|capfirst }}</dt><dd>Avant · {{ values.before|default:"—" }}<br>Après · {{ values.after|default:"—" }}</dd>
+        {% endfor %}</dl>
+      </details>
+      {% empty %}<p class="muted">Aucune correction enregistrée.</p>{% endfor %}
+    </section>
+    <section id="fiche-impact" aria-labelledby="map-title">
+      <h3 id="map-title">Carte des impacts</h3>
+      <ol class="impact-map">
+        <li><span>Intervention</span><strong>{{ selected.title }}</strong></li>
+        <li><span>Équipement</span><strong>{{ selected.equipment }}</strong></li>
+        <li><span>Service</span><strong>{{ selected.service|default:"Aucun service renseigné" }}</strong></li>
+      </ol>
+      <dl class="impact"><dt>Impact déclaré</dt><dd>{{ selected.impact }}</dd></dl>
+    </section>
+  </article>{% endif %}
 </div>
 {% if selected %}<script src="{% static 'sillage.js' %}" defer></script>{% endif %}
 {% endblock %}
