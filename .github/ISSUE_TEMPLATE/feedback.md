@@ -12,7 +12,7 @@ Dans quel contexte utilises-tu LogIT et quelle tâche essaies-tu d’accomplir ?
 
 ### Ton retour
 
-Qu’est-ce qui fonctionne bien, ou où est-ce que tu perds du temps ?
+Qu’est-ce qui fonctionne bien ? Indique la première étape où tu as hésité, perdu du temps ou cherché une information ailleurs.
 
 ### Amélioration souhaitée
 
