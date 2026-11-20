@@ -1,0 +1,36 @@
+{% load static %}<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}{% endblock %} · LogIT</title>
+  <link rel="stylesheet" href="{% static 'journal/logit.css' %}">
+  <script src="{% static 'journal/logit.js' %}" defer></script>
+</head>
+<body>
+{% if user.is_authenticated and not hide_nav %}
+<header class="topbar"><div class="inner">
+  <a class="brand" href="{% url 'home' %}">Log<span>IT</span></a>
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="{% url 'home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Registre</a>
+    {% if can_write %}<a href="{% url 'create' %}" {% if request.resolver_match.url_name == 'create' %}class="active"{% endif %}>Nouvelle fiche</a>{% endif %}
+    {% if is_admin %}
+      <a href="{% url 'admin_users' %}" {% if 'admin_user' in request.resolver_match.url_name %}class="active"{% endif %}>Comptes</a>
+      <a href="{% url 'admin_elements' %}" {% if 'admin_element' in request.resolver_match.url_name %}class="active"{% endif %}>Éléments</a>
+      <a href="{% url 'admin_audit' %}" {% if request.resolver_match.url_name == 'admin_audit' %}class="active"{% endif %}>Journal de sécurité</a>
+      <a href="{% url 'admin_integrity' %}" {% if request.resolver_match.url_name == 'admin_integrity' %}class="active"{% endif %}>Intégrité</a>
+    {% endif %}
+  </nav>
+  <div class="user">
+    <a href="{% url 'account' %}">{{ user.get_full_name|default:user.username }}</a>
+    <form class="inline" method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Déconnexion</button></form>
+  </div>
+</div></header>
+{% endif %}
+<main>
+  {% if messages %}<ul class="messages">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

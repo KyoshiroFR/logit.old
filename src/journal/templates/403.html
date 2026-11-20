@@ -1,0 +1,3 @@
+{% extends "journal/base.html" %}
+{% block title %}Accès refusé{% endblock %}
+{% block content %}<div class="card medium"><h1>Accès refusé</h1><p>Ton rôle ne permet pas cette action.</p><a class="button" href="{% url 'home' %}">Retour au registre</a></div>{% endblock %}

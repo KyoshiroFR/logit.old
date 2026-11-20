@@ -1,0 +1,45 @@
+{% extends "journal/base.html" %}
+{% block title %}{% if mode == 'create' %}Nouvelle fiche{% else %}Corriger la fiche n° {{ current.intervention_id }}{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  {% if mode == 'create' %}<h1>Nouvelle fiche</h1><p class="muted">La date d’enregistrement est posée automatiquement par le serveur.</p>
+  {% else %}<p class="muted small"><a href="{% url 'detail' current.intervention_id %}">Fiche n° {{ current.intervention_id }}</a> / Correction</p><h1>Corriger : {{ current.title }}</h1>
+  <p class="muted">La version actuelle reste conservée. Ta correction crée la version {{ current.number|add:1 }}, visible dans l’historique.</p>{% endif %}
+</div></div>
+<form method="post" class="medium" novalidate>{% csrf_token %}
+  {{ form.non_field_errors }}
+  {% if form.note %}<section class="card">{% include "journal/includes/field.html" with field=form.note %}</section>{% endif %}
+  <section class="card">
+    <div class="field radio-row">{{ form.kind.label_tag }}{{ form.kind }}{{ form.kind.errors }}</div>
+    <p id="urgent-hint" class="notice warn small" hidden>Urgence : seuls le titre, les éléments et la modification sont obligatoires. La fiche restera « à compléter » jusqu’à ce que le reste soit renseigné.</p>
+    <div class="form-grid">
+      {% include "journal/includes/field.html" with field=form.title %}
+      {% include "journal/includes/field.html" with field=form.occurred_at %}
+    </div>
+    <div class="field{% if form.elements.errors %} has-error{% endif %}">
+      <label>{{ form.elements.label }} <span class="muted">*</span></label>
+      <input type="search" class="checks-filter" placeholder="Filtrer les éléments…" data-filter-for="elements-list" aria-label="Filtrer les éléments">
+      <div class="checks" id="elements-list">{{ form.elements }}</div>
+      {% if not form.elements.field.queryset.exists %}<div class="help">Aucun élément. {% if is_admin %}<a href="{% url 'admin_elements' %}">Ajoute des équipements et services</a>.{% else %}Demande à un administrateur d’en ajouter.{% endif %}</div>{% endif %}
+      {{ form.elements.errors }}
+    </div>
+  </section>
+  <section class="card">
+    {% include "journal/includes/field.html" with field=form.change %}
+    {% include "journal/includes/field.html" with field=form.reason %}
+    {% include "journal/includes/field.html" with field=form.impact %}
+    {% include "journal/includes/field.html" with field=form.verification %}
+    {% include "journal/includes/field.html" with field=form.rollback %}
+  </section>
+  <section class="card">
+    <h2>Avant / après <span class="muted small">(facultatif)</span></h2>
+    <p class="muted small">Colle les extraits de configuration. Ne colle jamais de mot de passe, de clé ou de secret.</p>
+    <div class="form-grid">
+      {% include "journal/includes/field.html" with field=form.before_state %}
+      {% include "journal/includes/field.html" with field=form.after_state %}
+    </div>
+  </section>
+  <div class="actions"><button type="submit" class="primary">{% if mode == 'create' %}Enregistrer la fiche{% else %}Enregistrer la correction{% endif %}</button>
+    <a class="button" href="{% if mode == 'create' %}{% url 'home' %}{% else %}{% url 'detail' current.intervention_id %}{% endif %}">Annuler</a></div>
+</form>
+{% endblock %}

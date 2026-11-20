@@ -1,7 +1,4 @@
 .env
-.logit-install
 __pycache__/
 *.pyc
-*.sqlite3
-staticfiles/
-logit-local-ca.crt
+src/staticfiles/

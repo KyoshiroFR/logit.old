@@ -1,0 +1,6 @@
+<span class="tags">
+  {% if v.kind == 'urgent' %}<span class="tag urgent">Urgence</span>{% elif v.kind == 'planned' %}<span class="tag planned">Planifiée</span>{% else %}<span class="tag">Normale</span>{% endif %}
+  {% if v.status == 'planned' %}<span class="tag planned">À venir</span>{% elif v.status == 'cancelled' %}<span class="tag cancelled">Annulée</span>{% else %}<span class="tag done">Réalisée</span>{% endif %}
+  {% if v.incomplete %}<span class="tag warn">À compléter</span>{% endif %}
+  {% if v.number > 1 %}<span class="tag" title="Nombre de versions de la fiche">v{{ v.number }}</span>{% endif %}
+</span>

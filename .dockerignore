@@ -1,7 +1,4 @@
 .git
 .env
-.logit-install
-__pycache__
-*.sqlite3
-staticfiles
-logit-local-ca.crt
+**/__pycache__
+src/staticfiles

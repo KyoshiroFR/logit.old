@@ -1,0 +1,11 @@
+{% extends "journal/base.html" %}
+{% block title %}Code de vérification{% endblock %}
+{% block content %}
+<div class="narrow"><form method="post" class="card" novalidate>{% csrf_token %}
+  <h1>Code de vérification</h1>
+  <p class="muted">Saisis le code à 6 chiffres de ton application d’authentification, ou un code de secours.</p>
+  {% include "journal/includes/field.html" with field=form.code %}
+  <div class="actions"><button type="submit" class="primary">Valider</button></div>
+</form>
+<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Annuler et se déconnecter</button></form></div>
+{% endblock %}

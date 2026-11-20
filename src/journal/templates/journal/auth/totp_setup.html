@@ -1,0 +1,19 @@
+{% extends "journal/base.html" %}
+{% block title %}Activer le TOTP{% endblock %}
+{% block content %}
+<div class="medium">
+  <h1>Activer la double authentification</h1>
+  {% if required %}<p class="notice warn">Ton administrateur a rendu le TOTP obligatoire pour ton compte.</p>{% endif %}
+  <div class="card">
+    <p>1. Scanne ce QR code avec ton application (KeePassXC, Aegis, FreeOTP, Google Authenticator…).</p>
+    <div class="qr"><img src="{{ qr }}" alt="QR code TOTP"></div>
+    <p class="small muted">Ou saisis la clé manuellement :</p>
+    <div class="secret">{{ secret }}</div>
+  </div>
+  <form method="post" class="card" novalidate>{% csrf_token %}
+    <p>2. Saisis le code affiché par l’application pour confirmer.</p>
+    {% include "journal/includes/field.html" with field=form.code %}
+    <button type="submit" class="primary">Activer</button>
+  </form>
+</div>
+{% endblock %}

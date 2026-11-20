@@ -1,0 +1,13 @@
+{% extends "journal/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <p class="muted small"><a href="{% url 'detail' current.intervention_id %}">Fiche n° {{ current.intervention_id }}</a></p>
+  <h1>{{ title }}</h1><p class="muted">{{ current.title }}</p>
+</div></div>
+<form method="post" class="card medium" novalidate>{% csrf_token %}
+  {% for field in form %}{% include "journal/includes/field.html" %}{% endfor %}
+  <div class="actions"><button type="submit" class="{% if danger %}danger{% else %}primary{% endif %}">Confirmer</button>
+  <a class="button" href="{% url 'detail' current.intervention_id %}">Retour</a></div>
+</form>
+{% endblock %}

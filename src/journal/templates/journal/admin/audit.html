@@ -1,0 +1,18 @@
+{% extends "journal/base.html" %}
+{% block title %}Journal de sécurité{% endblock %}
+{% block content %}
+<h1>Journal de sécurité</h1>
+<p class="muted">Connexions, comptes et référentiel. Entrées en ajout seul, chaînées par empreinte.</p>
+<section class="card"><table>
+  <thead><tr><th>Date</th><th>Événement</th><th>Cible</th><th>Par</th><th>Détails</th><th>IP</th></tr></thead>
+  <tbody>{% for e in page.object_list %}<tr>
+    <td class="when small">{{ e.recorded_at|date:"d/m/Y H:i:s" }}</td><td><code>{{ e.action }}</code></td>
+    <td>{{ e.target }}</td><td>{{ e.actor|default:"—" }}</td>
+    <td class="small">{% for k, v in e.details.items %}{{ k }} : {{ v }}{% if not forloop.last %} · {% endif %}{% endfor %}</td>
+    <td class="small muted">{{ e.ip|default:"" }}</td></tr>{% endfor %}</tbody>
+</table>
+{% if page.has_other_pages %}<nav class="pager">{% if page.has_previous %}<a class="button" href="?page={{ page.previous_page_number }}">← Plus récents</a>{% endif %}
+<span class="muted small">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>
+{% if page.has_next %}<a class="button" href="?page={{ page.next_page_number }}">Plus anciens →</a>{% endif %}</nav>{% endif %}
+</section>
+{% endblock %}

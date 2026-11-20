@@ -1,0 +1,73 @@
+{% extends "journal/base.html" %}
+{% block title %}Fiche n° {{ intervention.pk }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="muted small"><a href="{% url 'home' %}">Registre</a> / Fiche n° {{ intervention.pk }}</p>
+    <h1>{{ current.title }}</h1>
+    {% include "journal/includes/tags.html" with v=current %}
+  </div>
+  {% if can_write and current.status != 'cancelled' %}<div class="actions">
+    {% if current.status == 'planned' %}<a class="button primary" href="{% url 'complete' intervention.pk %}">Marquer réalisée</a>{% endif %}
+    <a class="button" href="{% url 'correct' intervention.pk %}">Corriger</a>
+    <a class="button danger" href="{% url 'cancel' intervention.pk %}">Annuler la fiche</a>
+  </div>{% endif %}
+</div>
+
+{% if current.status == 'cancelled' %}<p class="notice danger">Fiche annulée le {{ current.recorded_at|date:"d/m/Y à H:i" }} par {{ current.author }} : {{ current.note }}</p>{% endif %}
+{% if current.incomplete %}<p class="notice warn">Fiche à compléter : {% if not current.reason %}motif, {% endif %}{% if not current.impact %}impact, {% endif %}{% if not current.verification %}vérifications, {% endif %}{% if not current.rollback %}retour arrière, {% endif %}à renseigner.</p>{% endif %}
+{% if sensitive_corrected %}<p class="notice warn">L’impact ou le retour arrière de cette fiche a été corrigé. Consulte l’historique ci-dessous.</p>{% endif %}
+
+<div class="grid-2">
+  <section class="card">
+    <h2>Horodatage</h2>
+    <dl class="facts">
+      <dt>{% if current.status == 'planned' %}Prévue le{% else %}Intervention{% endif %}</dt><dd class="when">{{ current.occurred_at|date:"l d F Y à H:i" }} <span class="muted small">(déclarée)</span></dd>
+      <dt>Enregistrée</dt><dd class="when">{{ intervention.recorded_at|date:"l d F Y à H:i:s" }} <span class="muted small">(serveur, non modifiable)</span></dd>
+      <dt>Par</dt><dd>{{ intervention.created_by.get_full_name|default:intervention.created_by.username }}</dd>
+      {% if first.late_entry %}<dt></dt><dd><span class="tag warn">Saisie a posteriori : {{ first.occurred_at|timesince:intervention.recorded_at }} après l’intervention</span></dd>{% endif %}
+      {% if corrections %}<dt>Corrigée</dt><dd>{{ corrections|length }} fois, dernière le {{ corrections.0.version.recorded_at|date:"d/m/Y à H:i" }} par {{ corrections.0.version.author }}</dd>{% endif %}
+    </dl>
+  </section>
+  <section class="card">
+    <h2>Éléments concernés</h2>
+    <ul class="compact-list">{% for e in current.elements.all %}<li><span>{{ e.name }}{% if e.archived %} <span class="tag">archivé</span>{% endif %}</span><span class="muted small">{{ e.get_kind_display }}</span></li>{% endfor %}</ul>
+  </section>
+</div>
+
+<section class="card fiche-fields">
+  <h3>Modification</h3><div class="section-text">{{ current.change }}</div>
+  <h3>Motif</h3><div class="section-text">{{ current.reason|default:"" }}{% if not current.reason %}<span class="empty">Non renseigné</span>{% endif %}</div>
+  <h3>Impact</h3><div class="section-text">{{ current.impact|default:"" }}{% if not current.impact %}<span class="empty">Non renseigné</span>{% endif %}</div>
+  <h3>Vérifications</h3><div class="section-text">{{ current.verification|default:"" }}{% if not current.verification %}<span class="empty">Non renseigné</span>{% endif %}</div>
+</section>
+
+<section class="card rollback" id="retour-arriere">
+  <h2>Retour arrière</h2>
+  <div class="section-text">{{ current.rollback|default:"" }}{% if not current.rollback %}<span class="empty">Non renseigné</span>{% endif %}</div>
+</section>
+
+{% if state_diff %}<section class="card">
+  <h2>Avant / après</h2>
+  <p class="muted small">Lignes retirées en rouge, ajoutées en vert.</p>
+  <div class="diff">{% for kind, line in state_diff %}<div class="{{ kind }}">{{ line }}</div>{% endfor %}</div>
+</section>{% endif %}
+
+<section class="card">
+  <h2>Historique</h2>
+  <ol class="timeline">
+    {% for h in history %}<li>
+      <strong>v{{ h.version.number }} · {{ h.version.get_action_display }}</strong>
+      <span class="muted small">le {{ h.version.recorded_at|date:"d/m/Y à H:i:s" }} par {{ h.version.author }}</span>
+      {% if h.version.note %}<p>Motif : {{ h.version.note }}</p>{% endif %}
+      {% for c in h.changes %}
+        <div class="small"><strong>{{ c.label|capfirst }}</strong></div>
+        {% if c.simple %}<div class="change-simple"><del>{{ c.old }}</del> → <ins>{{ c.new }}</ins></div>
+        {% else %}<div class="diff">{% for kind, line in c.rows %}<div class="{{ kind }}">{{ line }}</div>{% endfor %}</div>{% endif %}
+      {% endfor %}
+    </li>{% endfor %}
+    <li><strong>v1 · Création</strong> <span class="muted small">le {{ first.recorded_at|date:"d/m/Y à H:i:s" }} par {{ first.author }}</span></li>
+  </ol>
+  <p class="muted small">Empreinte de la version actuelle : <code>{{ current.hash|slice:":16" }}…</code></p>
+</section>
+{% endblock %}

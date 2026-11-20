@@ -1,0 +1,15 @@
+{% extends "journal/base.html" %}
+{% block title %}Connexion{% endblock %}
+{% block content %}
+<div class="narrow">
+  <p class="brand">Log<span>IT</span></p>
+  <form method="post" class="card" novalidate>{% csrf_token %}
+    <h1>Connexion</h1>
+    {{ form.non_field_errors }}
+    {% include "journal/includes/field.html" with field=form.username %}
+    {% include "journal/includes/field.html" with field=form.password %}
+    <button type="submit" class="primary">Se connecter</button>
+  </form>
+  <p class="muted small">Accès réservé. Les connexions sont enregistrées dans le journal de sécurité.</p>
+</div>
+{% endblock %}
