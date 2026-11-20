@@ -2,7 +2,8 @@ import os
 
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 DEBUG = False
-ALLOWED_HOSTS = [os.getenv("LOGIT_HOST", "localhost")]
+# LOGIT_HOST accepte plusieurs adresses séparées par des virgules ou des espaces.
+ALLOWED_HOSTS = os.getenv("LOGIT_HOST", "localhost").replace(",", " ").split()
 ROOT_URLCONF = "logit.urls"
 WSGI_APPLICATION = "logit.wsgi.application"
 INSTALLED_APPS = [

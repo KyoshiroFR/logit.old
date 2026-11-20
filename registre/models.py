@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -35,6 +37,8 @@ class Service(models.Model):
 class Intervention(models.Model):
     title = models.CharField("titre", max_length=180)
     occurred_at = models.DateTimeField("date de l’intervention", default=timezone.now)
+    # Posée par le serveur à l'enregistrement et jamais modifiable. Vide pour les fiches antérieures à ce champ.
+    recorded_at = models.DateTimeField("date d’enregistrement", auto_now_add=True, null=True)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     equipment = models.ForeignKey(Equipment, verbose_name="équipement", on_delete=models.PROTECT)
     service = models.ForeignKey(Service, verbose_name="service", on_delete=models.PROTECT, blank=True, null=True)
@@ -53,6 +57,13 @@ class Intervention(models.Model):
     class Meta:
         ordering = ["-occurred_at", "-pk"]
 
+    LATE_ENTRY_THRESHOLD = timedelta(minutes=15)
+
+    @property
+    def late_entry(self):
+        """Vrai si la fiche a été enregistrée plus de 15 minutes après l'intervention déclarée."""
+        return bool(self.recorded_at and self.recorded_at - self.occurred_at > self.LATE_ENTRY_THRESHOLD)
+
     def snapshot(self):
         snapshot = {
             field.verbose_name: str(
@@ -60,7 +71,7 @@ class Intervention(models.Model):
                 if field.name == "occurred_at" else value or ""
             )
             for field in self._meta.fields
-            if field.name not in {"id", "author"}
+            if field.name not in {"id", "author", "recorded_at"}
             for value in [getattr(self, field.name)]
         }
         snapshot["services concernés"] = ", ".join(service.name for service in self.impacted_services.all())

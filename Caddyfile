@@ -2,10 +2,12 @@
     auto_https disable_redirects
 }
 
-http://{$LOGIT_HOST} {
-    redir https://{$LOGIT_HOST}:{$LOGIT_HTTPS_PORT:6321}{uri} 308
+# Redirige HTTP vers HTTPS quelle que soit l'adresse utilisée.
+:80 {
+    redir https://{host}:{$LOGIT_HTTPS_PORT:6321}{uri} 308
 }
 
+# LOGIT_HOST peut lister plusieurs adresses : « 192.168.1.10, logit, localhost ».
 {$LOGIT_HOST} {
     tls internal
     reverse_proxy app:8000

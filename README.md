@@ -10,25 +10,43 @@ LogIT est un registre auto-hébergé des changements d’infrastructure et de s�
 
 ## Installer LogIT
 
-Depuis **Linux ou Windows via WSL**, avec Bash, `curl` et Docker Compose disponibles, lance cette commande dans le répertoire qui accueillera le dossier `logit`.
+Sur **Debian 12 (Bookworm) ou 13 (Trixie)**, en amd64 ou arm64, lance cette commande avec un compte qui peut utiliser `sudo`.
 
 ```bash
-installateur=$(curl -fsSL https://logit.kyoshiro.ovh/install.sh) && bash -c "$installateur"
+installateur=$(curl -fsSL https://logit.kyoshiro.ovh/install.sh) && sudo bash -c "$installateur"
 ```
 
-L’installation démarre avec une base vide. Le terminal affiche le mot de passe temporaire de `admin-logit`, à remplacer lors de la première connexion. Ouvre ensuite [https://localhost:6321](https://localhost:6321).
+Sur une Debian fraîchement installée, `curl` et `sudo` peuvent manquer. Connecte-toi alors en root avec `su -` et utilise `wget`, présent par défaut.
 
-- **Certificat local**. Si le navigateur signale que le certificat est inconnu, exporte l’autorité publique de ton conteneur Caddy, puis importe-la dans le magasin de confiance du navigateur de test. Cette commande utilise le nom de l’instance par défaut.
+```bash
+installateur=$(wget -qO- https://logit.kyoshiro.ovh/install.sh) && bash -c "$installateur"
+```
 
-  ```bash
-  docker cp logit-proxy:/data/caddy/pki/authorities/local/root.crt logit-local-ca.crt
-  ```
+L’installateur s’occupe du reste.
 
-- **Ports déjà utilisés**. Depuis un autre dossier, tu peux lancer une instance distincte sur les ports `16320` et `16321`, puis ouvrir `https://localhost:16321`.
+1. Il vérifie le système, puis installe les prérequis manquants (`ca-certificates`, `curl`, `tar`).
+2. Si Docker est absent, il installe Docker Engine et le plugin Compose depuis [le dépôt officiel Docker](https://docs.docker.com/engine/install/debian/). Si un paquet non officiel comme `docker.io` est présent, il s’arrête et indique quoi désinstaller.
+3. Il active la synchronisation NTP, car la date d’enregistrement des fiches vient de l’horloge de la machine.
+4. Il télécharge la version publiée, vérifie son empreinte SHA-256 et l’installe dans `/opt/logit` avec une base vide.
+5. Il demande les adresses d’accès (IP et nom de la machine proposés par défaut), puis affiche les URL et le mot de passe temporaire de `admin-logit`, à remplacer lors de la première connexion.
+
+Relancer la commande sur une machine où LogIT tourne déjà ne modifie rien. Une installation interrompue reprend là où elle s’était arrêtée.
+
+- **Installation sans question**. Fixe les adresses d’accès avec `LOGIT_INSTALL_HOST`, séparées par des espaces.
 
   ```bash
   installateur=$(curl -fsSL https://logit.kyoshiro.ovh/install.sh) &&
-    LOGIT_INSTALL_INSTANCE=logit-test LOGIT_INSTALL_HTTP_PORT=16320 LOGIT_INSTALL_HTTPS_PORT=16321 bash -c "$installateur"
+    sudo LOGIT_INSTALL_HOST="192.168.1.10 logit.interne" bash -c "$installateur"
+  ```
+
+- **Autres réglages**. `LOGIT_INSTALL_DIR` change le dossier (`/opt/logit` par défaut). `LOGIT_INSTALL_INSTANCE`, `LOGIT_INSTALL_HTTP_PORT` et `LOGIT_INSTALL_HTTPS_PORT` permettent une instance distincte, par exemple `logit-test` sur les ports `16320` et `16321`.
+
+- **WSL**. Sous Debian dans WSL, l’installateur utilise le Docker déjà disponible, par exemple via l’intégration WSL de Docker Desktop. Il n’installe pas Docker dans WSL.
+
+- **Certificat local**. Caddy signe le certificat avec sa propre autorité. Si le navigateur signale un certificat inconnu, exporte l’autorité publique, puis importe-la dans le magasin de confiance des postes de l’équipe.
+
+  ```bash
+  sudo docker cp logit-proxy:/data/caddy/pki/authorities/local/root.crt logit-local-ca.crt
   ```
 
 Retrouve [la release v1.0.0](https://github.com/KyoshiroFR/logit/releases/tag/v1.0.0), ou consulte [la documentation](docs/README.md) pour la sauvegarde et la restauration.

@@ -51,7 +51,8 @@
     {% if from_history %}<a class="button history-return" href="{% url 'history' %}{% if return_query %}?{{ return_query }}{% endif %}#result-{{ selected.pk }}">← Retour aux résultats</a>{% endif %}
     <header class="sillage-record">
       <span class="sillage-mark" aria-hidden="true">▤</span>
-      <div><h2>{{ selected.title }}</h2><p class="muted">#{{ selected.pk }} · {{ selected.occurred_at|date:"d M Y à H:i" }}</p></div>
+      <div><h2>{{ selected.title }}</h2><p class="muted">#{{ selected.pk }} · {{ selected.occurred_at|date:"d M Y à H:i" }}</p>
+        {% if selected.recorded_at %}<p class="muted">Enregistrée le {{ selected.recorded_at|date:"d M Y à H:i" }}{% if selected.late_entry %} · <strong>saisie a posteriori, {{ selected.occurred_at|timesince:selected.recorded_at }} après l’intervention</strong>{% endif %}</p>{% endif %}</div>
       <span class="tag">{{ selected.equipment }}</span>
     </header>
     <nav class="fiche-tabs" aria-label="Sections de la fiche" hidden>

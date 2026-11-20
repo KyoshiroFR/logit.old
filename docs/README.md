@@ -4,7 +4,7 @@ Registre interne des changements d’infrastructure et de sécurité pour une pe
 
 ## Installateur pour une base vide
 
-L’installateur cible Bash sous Linux ou WSL avec accès à Docker Compose en mode Linux. Il crée un dossier `logit` dans le répertoire courant et démarre l’instance sur `https://localhost:6321`. Le proxy redirige HTTP sur le port 6320. Le compte `admin-logit` reçoit un mot de passe temporaire affiché dans le terminal lors de sa création et doit le changer à la première connexion. Une relance avec les mêmes paramètres reprend l’installation sans recréer les comptes.
+L’installateur cible Debian 12 et 13. Lancé en root, il installe les prérequis manquants, Docker Engine depuis le dépôt officiel s’il est absent, active la synchronisation NTP, puis crée l’instance dans `/opt/logit` (modifiable avec `LOGIT_INSTALL_DIR`). Le proxy écoute sur toutes les interfaces, sur le port 6321 en HTTPS et 6320 en HTTP redirigé, pour les adresses choisies à l’installation (`LOGIT_HOST` dans `.env`). Le compte `admin-logit` reçoit un mot de passe temporaire affiché dans le terminal lors de sa création et doit le changer à la première connexion. Une relance avec les mêmes paramètres ne modifie pas une instance démarrée et reprend une installation interrompue sans recréer les comptes.
 
 Pour tester sur le même moteur que la préproduction, lancer depuis un autre dossier ou fixer `LOGIT_INSTALL_DIR`, puis définir `LOGIT_INSTALL_INSTANCE`, `LOGIT_INSTALL_HTTP_PORT` et `LOGIT_INSTALL_HTTPS_PORT` avec des valeurs distinctes. L’installateur refuse de réutiliser les ressources d’une installation existante lors de la création d’un nouveau dossier.
 

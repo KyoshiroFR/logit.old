@@ -384,3 +384,54 @@ class RegistreTests(TestCase):
         self.assertEqual(response.content, capture.getvalue())
         self.client.logout()
         self.assertEqual(self.client.get(url, secure=True).status_code, 302)
+
+
+class DateEnregistrementTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("nadia")
+        self.firewall = Equipment.objects.create(name="Pare-feu")
+        self.client.force_login(self.user)
+        self.fields = {
+            "title": "Règle NAT", "equipment": self.firewall.pk, "change": "Ajout d’une règle",
+            "reason": "Demande", "impact": "Aucun", "rollback": "Supprimer la règle", "verification": "Ping",
+        }
+
+    def test_date_posee_par_le_serveur_et_non_modifiable(self):
+        before = timezone.now()
+        fields = dict(self.fields, occurred_at=timezone.localtime().strftime("%Y-%m-%dT%H:%M"),
+                      recorded_at="2001-01-01T00:00")
+        self.client.post("/interventions/nouvelle/", fields, secure=True)
+        item = Intervention.objects.get()
+        self.assertGreaterEqual(item.recorded_at, before)
+        recorded = item.recorded_at
+
+        fields.update(impact="Coupure de 2 min", correction_reason="Précision", recorded_at="2030-01-01T00:00")
+        self.client.post(f"/interventions/{item.pk}/corriger/", fields, secure=True)
+        item.refresh_from_db()
+        self.assertEqual(item.impact, "Coupure de 2 min")
+        self.assertEqual(item.recorded_at, recorded)
+        self.assertNotIn("date d’enregistrement", Revision.objects.get().changes)
+        self.assertNotIn("recorded_at", self.client.get(f"/interventions/{item.pk}/corriger/", secure=True).context["form"].fields)
+
+    def test_saisie_a_posteriori_signalee(self):
+        occurred = timezone.localtime() - timedelta(hours=6)
+        self.client.post("/interventions/nouvelle/", dict(self.fields, occurred_at=occurred.strftime("%Y-%m-%dT%H:%M")), secure=True)
+        item = Intervention.objects.get()
+        self.assertTrue(item.late_entry)
+        self.assertContains(self.client.get(f"/interventions/{item.pk}/", secure=True), "saisie a posteriori, 6")
+
+    def test_saisie_immediate_non_signalee(self):
+        self.client.post("/interventions/nouvelle/", dict(self.fields, occurred_at=timezone.localtime().strftime("%Y-%m-%dT%H:%M")), secure=True)
+        item = Intervention.objects.get()
+        self.assertFalse(item.late_entry)
+        detail = self.client.get(f"/interventions/{item.pk}/", secure=True)
+        self.assertContains(detail, "Enregistrée le")
+        self.assertNotContains(detail, "saisie a posteriori")
+
+    def test_fiche_anterieure_sans_date_inventee(self):
+        item = Intervention.objects.create(author=self.user, equipment=self.firewall, **{
+            k: v for k, v in self.fields.items() if k != "equipment"})
+        Intervention.objects.filter(pk=item.pk).update(recorded_at=None)
+        item.refresh_from_db()
+        self.assertFalse(item.late_entry)
+        self.assertNotContains(self.client.get(f"/interventions/{item.pk}/", secure=True), "Enregistrée le")
