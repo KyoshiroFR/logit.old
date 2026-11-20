@@ -17,7 +17,7 @@ set -Eeuo pipefail
 umask 027
 
 LOGIT_REPO="https://github.com/KyoshiroFR/logit.git"
-LOGIT_DEFAULT_REF="v2.0.0"
+LOGIT_DEFAULT_REF="v1-refonte"  # passera à "v2.0.0" lors de la publication du tag
 # Empreinte Git du commit de la version : renseignée lors de la publication d'une version.
 LOGIT_DEFAULT_COMMIT=""
 
