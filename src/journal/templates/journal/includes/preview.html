@@ -1,0 +1,13 @@
+<div class="blocks">
+  <section class="block"><h3>Ce qui a changé</h3><div class="section-text">{{ current.change }}</div></section>
+  <section class="block"><h3>Pourquoi</h3><div class="section-text">{{ current.reason|default:"" }}{% if not current.reason %}<span class="empty">Non renseigné</span>{% endif %}</div></section>
+  <section class="block"><h3>Impacts potentiels à surveiller</h3><div class="section-text">{{ current.impact|default:"" }}{% if not current.impact %}<span class="empty">Non renseigné</span>{% endif %}</div></section>
+  <section class="block rollback"><h3>Procédure de retour arrière</h3><div class="section-text">{{ current.rollback|default:"" }}{% if not current.rollback %}<span class="empty">Non renseignée</span>{% endif %}</div></section>
+  {% if current.verification %}<section class="block wide"><h3>Vérifications effectuées</h3><div class="section-text">{{ current.verification }}</div></section>{% endif %}
+  {% if state_diff %}<section class="block wide"><h3>Avant / après</h3><div class="diff">{% for kind, line in state_diff %}<div class="{{ kind }}">{{ line }}</div>{% endfor %}</div></section>{% endif %}
+  {% if attachments %}<section class="block wide"><h3>Captures</h3><div class="gallery">{% for a in attachments %}<figure><a href="{% url 'attachment' a.pk %}" target="_blank" rel="noopener"><img src="{% url 'attachment' a.pk %}" alt="{{ a.name }}" loading="lazy" width="{{ a.width }}" height="{{ a.height }}"></a></figure>{% endfor %}</div></section>{% endif %}
+</div>
+<div class="entry-foot">
+  <span class="muted small">Enregistrée le {{ intervention.recorded_at|date:"d/m/Y à H:i:s" }} (serveur){% if current.number > 1 %} · {{ current.number }} versions{% endif %}</span>
+  <a class="button" href="{% url 'detail' intervention.pk %}">Ouvrir la fiche complète →</a>
+</div>

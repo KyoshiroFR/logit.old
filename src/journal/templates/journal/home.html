@@ -6,55 +6,49 @@
   {% if can_write %}<a class="button primary" href="{% url 'create' %}">+ Nouvelle fiche</a>{% endif %}
 </div>
 
-<form class="card filters" method="get" role="search">
-  {% include "journal/includes/field.html" with field=form.q %}
-  {% include "journal/includes/field.html" with field=form.element %}
-  {% include "journal/includes/field.html" with field=form.kind %}
-  {% include "journal/includes/field.html" with field=form.period %}
-  <div class="actions"><button type="submit" class="primary">Filtrer</button>{% if filters_active %}<a class="button" href="{% url 'home' %}">Effacer</a>{% endif %}</div>
-</form>
+<div class="pulse-strip">
+  <a class="stat accent" href="#nouveautes"><strong>{{ unseen|length }}</strong><span>nouveauté{{ unseen|length|pluralize }} depuis ta dernière visite</span></a>
+  <a class="stat watch" href="#a-completer"><strong>{{ to_complete|length }}</strong><span>fiche{{ to_complete|length|pluralize }} à compléter</span></a>
+  <a class="stat info" href="#a-venir"><strong>{{ upcoming|length }}</strong><span>intervention{{ upcoming|length|pluralize }} planifiée{{ upcoming|length|pluralize }}</span></a>
+</div>
 
-{% if unseen %}<section class="card unseen">
-  <div class="page-head"><h2>Depuis ta dernière visite <span class="tag planned">{{ unseen|length }}</span></h2>
+{% if unseen %}<section class="card unseen" id="nouveautes">
+  <div class="page-head"><h2>Depuis ta dernière visite</h2>
   <form method="post" action="{% url 'mark_read' %}">{% csrf_token %}<input type="hidden" name="upto" value="{{ unseen_upto }}"><button type="submit">Marquer comme lu</button></form></div>
   <ul class="compact-list">{% for item in unseen %}<li>
-    <span><span class="tag{% if item.label == 'Retour arrière' or item.label == 'Annulation' %} urgent{% elif item.sensitive %} warn{% endif %}">{{ item.label }}</span>
+    <span class="tags"><span class="tag soft {% if item.label == 'Retour arrière' or item.label == 'Annulation' %}rolledback{% elif item.sensitive %}watch{% else %}planned{% endif %}">{{ item.label }}</span>
       <a href="{% url 'detail' item.version.intervention_id %}">n° {{ item.version.intervention_id }} · {{ item.version.title }}</a>
-      {% if item.sensitive %}<strong class="small">— {{ item.sensitive|join:" et " }} modifié{{ item.sensitive|length|pluralize }}</strong>{% endif %}</span>
+      {% if item.sensitive %}<strong class="small">{{ item.sensitive|join:" et "|capfirst }} modifié{{ item.sensitive|length|pluralize }}</strong>{% endif %}</span>
     <span class="muted small when">{{ item.version.recorded_at|date:"d/m H:i" }} · {{ item.version.author }}</span>
   </li>{% endfor %}</ul>
 </section>{% endif %}
 
-{% if not filters_active and to_complete or not filters_active and upcoming %}
-<div class="grid-2">
-  {% if to_complete %}<section class="card"><h2>À compléter <span class="tag warn">{{ to_complete|length }}</span></h2>
+{% if to_complete or upcoming %}<div class="grid-2">
+  {% if to_complete %}<section class="card" id="a-completer"><h2>À compléter</h2>
     <ul class="compact-list">{% for v in to_complete %}<li><a href="{% url 'detail' v.intervention_id %}">n° {{ v.intervention_id }} · {{ v.title }}</a><span class="muted small when">{{ v.occurred_at|date:"d/m H:i" }} · {{ v.author }}</span></li>{% endfor %}</ul>
   </section>{% endif %}
-  {% if upcoming %}<section class="card"><h2>À venir <span class="tag planned">{{ upcoming|length }}</span></h2>
+  {% if upcoming %}<section class="card" id="a-venir"><h2>À venir</h2>
     <ul class="compact-list">{% for v in upcoming %}<li><a href="{% url 'detail' v.intervention_id %}">n° {{ v.intervention_id }} · {{ v.title }}</a><span class="muted small when">prévue le {{ v.occurred_at|date:"d/m H:i" }}</span></li>{% endfor %}</ul>
   </section>{% endif %}
-</div>
-{% endif %}
+</div>{% endif %}
 
-<section class="card">
-  <h2>{% if filters_active %}{{ page.paginator.count }} résultat{{ page.paginator.count|pluralize }}{% else %}Dernières interventions{% endif %}</h2>
-  {% if page.object_list %}
-  <table>
-    <thead><tr><th>N°</th><th>Date</th><th>Intervention</th><th>Éléments</th><th>Auteur</th></tr></thead>
-    <tbody>{% for v in page.object_list %}
-      <tr>
-        <td class="muted">{{ v.intervention_id }}</td>
-        <td class="when">{{ v.occurred_at|date:"d/m/Y H:i" }}</td>
-        <td><a class="rowlink" href="{% url 'detail' v.intervention_id %}">{{ v.title }}</a><div>{% include "journal/includes/tags.html" %}{% if v.intervention_id in rolled_back %} <span class="tag urgent">Retour arrière effectué</span>{% endif %}{% if v.intervention.rollback_of_id %} <span class="tag">retour de n° {{ v.intervention.rollback_of_id }}</span>{% endif %}</div></td>
-        <td class="small">{% for e in v.elements.all %}{{ e.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
-        <td class="small">{{ v.intervention.created_by }}</td>
-      </tr>{% endfor %}</tbody>
-  </table>
-  {% if page.has_other_pages %}<nav class="pager">
-    {% if page.has_previous %}<a class="button" href="?{{ query }}&page={{ page.previous_page_number }}">← Précédent</a>{% endif %}
-    <span class="muted small">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>
-    {% if page.has_next %}<a class="button" href="?{{ query }}&page={{ page.next_page_number }}">Suivant →</a>{% endif %}
-  </nav>{% endif %}
-  {% else %}<p class="empty">{% if filters_active %}Aucune intervention ne correspond.{% else %}Aucune intervention pour l’instant.{% endif %}</p>{% endif %}
-</section>
+<form class="filters" id="filters" method="get" role="search" novalidate>
+  <div class="field search">
+    <label for="{{ form.q.id_for_label }}">Recherche</label>
+    <span class="lens" aria-hidden="true"></span>
+    <input type="search" name="q" id="{{ form.q.id_for_label }}" value="{{ form.q.value|default:'' }}" placeholder="NTLM, GPO, pare-feu, nom d’un serveur…" autocomplete="off">
+    <kbd title="Raccourci">/</kbd>
+  </div>
+  <div class="field"><label for="{{ form.element.id_for_label }}">Élément</label>{{ form.element }}</div>
+  <div class="row">
+    <div class="group"><span class="group-label">Catégorie</span><div class="segmented">{% for radio in form.category %}<label>{{ radio.tag }}{{ radio.choice_label }}</label>{% endfor %}</div></div>
+    <div class="group"><span class="group-label">Période</span><div class="segmented">{% for radio in form.period %}<label>{{ radio.tag }}{{ radio.choice_label }}</label>{% endfor %}</div></div>
+    <div class="group"><span class="group-label">Déroulement</span><div class="segmented">{% for radio in form.kind %}<label>{{ radio.tag }}{{ radio.choice_label }}</label>{% endfor %}</div></div>
+    <noscript><button type="submit" class="primary">Filtrer</button></noscript>
+    <a class="button reset" href="{% url 'home' %}" data-reset>Réinitialiser</a>
+  </div>
+</form>
+
+<span class="results-anchor"></span>
+<div id="results" aria-live="polite">{% include "journal/includes/results.html" %}</div>
 {% endblock %}

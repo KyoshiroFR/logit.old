@@ -2,6 +2,8 @@
 
 Registre des interventions d’infrastructure et de sécurité pour une petite équipe : **qui** a changé **quoi**, **quand**, **pourquoi**, avec quel **impact**, et **comment revenir en arrière**.
 
+![Registre LogIT : blocs d’intervention avec état, résumé avant/après et procédure de rollback](docs/images/registre.png)
+
 Conçu pour la traçabilité exigée par NIS2 : l’horodatage est posé par le serveur, rien ne s’efface, et la base de données elle-même refuse toute modification des traces.
 
 ## Installation
@@ -94,6 +96,15 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/KyoshiroFR/logit/ma
 - **Captures** : colle une capture avec Ctrl+V n’importe où sur le formulaire, ou choisis des fichiers (PNG, JPEG, WebP, 5 Mo par image, 10 par fiche). Chaque fichier est vérifié comme une vraie image. Les captures sont immuables, rattachées à la version qui les a ajoutées et incluses dans la chaîne d’empreintes.
 - **Retour arrière lié** : depuis une fiche réalisée, « Consigner un retour arrière » crée une nouvelle fiche liée, préremplie avec la procédure de retour arrière et les états avant/après inversés. La fiche d’origine affiche alors « retour arrière effectué ».
 - **Depuis ta dernière visite** : l’accueil liste ce que les autres ont enregistré depuis ta dernière lecture (nouvelles fiches, corrections, réalisations, annulations, retours arrière). Une correction de l’impact ou du retour arrière est mise en avant. Le menu affiche le nombre de nouveautés. « Marquer comme lu » ne masque que ce qui était affiché.
+
+### L’interface
+
+- **Registre** : chaque intervention est un bloc horizontal avec son état (Appliqué, Planifiée, En cours, À compléter, Rollback effectué, Annulée), l’alerte « Impact à surveiller », l’horodatage à la seconde, l’intervenant (et son absence éventuelle), le résumé Cible / Avant / Après et un encart dédié au retour arrière.
+- **Enquête** : la recherche (raccourci <kbd>/</kbd>) et les filtres par élément, catégorie, période et déroulement mettent la liste à jour sans recharger la page. « Voir le détail » déploie les 4 blocs, les vérifications, le diff avant/après et les captures.
+- **Saisie** : identification (catégorie, déroulement, éléments par domaine), puis 4 blocs courts : ce qui a changé, pourquoi, impacts potentiels, procédure de retour arrière. Les détails techniques sont repliés.
+- **Absence** : chacun indique ses congés dans « Mon compte » (ou un admin le fait). Ses fiches affichent alors « Absent jusqu’au … ».
+
+![Détail déployé d’une intervention](docs/images/detail-deploye.png)
 
 ### Les rôles
 

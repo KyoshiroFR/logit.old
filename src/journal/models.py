@@ -16,13 +16,17 @@ class Element(models.Model):
     SERVICE = "service"
     KINDS = [(EQUIPMENT, "Équipement"), (SERVICE, "Service")]
 
+    GROUPS = [("ad", "AD / GPO"), ("network", "Réseau / Pare-feu"), ("server", "Serveurs"),
+              ("database", "Base de données"), ("application", "Applications"), ("other", "Autre")]
+
     name = models.CharField("nom", max_length=120, unique=True)
     kind = models.CharField("type", max_length=12, choices=KINDS)
+    group = models.CharField("domaine", max_length=12, choices=GROUPS, default="other")
     description = models.CharField("description", max_length=250, blank=True)
     archived = models.BooleanField("archivé", default=False)
 
     class Meta:
-        ordering = ["kind", "name"]
+        ordering = ["group", "name"]
 
     def __str__(self):
         return self.name
@@ -38,6 +42,7 @@ class Profile(models.Model):
     totp_confirmed = models.BooleanField(default=False)
     totp_last_step = models.BigIntegerField(default=0)
     recovery_codes = models.JSONField(default=list, blank=True)  # empreintes des codes de secours
+    away_until = models.DateField("absent jusqu’au", null=True, blank=True)
     failed_attempts = models.PositiveIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
 
@@ -65,12 +70,14 @@ class Version(models.Model):
     KINDS = [(PLANNED, "Planifiée"), (NORMAL, "Normale"), (URGENT, "Urgence")]
     STATUS_PLANNED, STATUS_DONE, STATUS_CANCELLED = "planned", "done", "cancelled"
     STATUSES = [(STATUS_PLANNED, "Planifiée"), (STATUS_DONE, "Réalisée"), (STATUS_CANCELLED, "Annulée")]
+    CATEGORIES = [("security", "Sécurité"), ("maintenance", "Maintenance"), ("config", "Changement de config"),
+                  ("fix", "Correctif")]
     CREATED, CORRECTED, COMPLETED, CANCELLED = "created", "corrected", "completed", "cancelled"
     ACTIONS = [(CREATED, "Création"), (CORRECTED, "Correction"), (COMPLETED, "Marquée réalisée"),
                (CANCELLED, "Annulation")]
 
     # Champs à remplir pour qu'une fiche soit complète (une urgence peut être enregistrée sans).
-    REQUIRED_FOR_COMPLETE = ["reason", "impact", "verification", "rollback"]
+    REQUIRED_FOR_COMPLETE = ["reason", "impact", "rollback"]
     CONTENT_FIELDS = ["kind", "status", "title", "occurred_at", "change", "reason", "impact",
                       "verification", "rollback", "before_state", "after_state"]
 
@@ -82,6 +89,7 @@ class Version(models.Model):
     recorded_at = models.DateTimeField("date d’enregistrement")
 
     kind = models.CharField("type", max_length=10, choices=KINDS)
+    category = models.CharField("catégorie", max_length=12, choices=CATEGORIES, blank=True, default="")
     status = models.CharField("statut", max_length=10, choices=STATUSES)
     title = models.CharField("titre", max_length=200)
     occurred_at = models.DateTimeField("date de l’intervention")
@@ -121,6 +129,8 @@ class Version(models.Model):
         # Clés ajoutées en 2.1 : présentes seulement si utilisées, pour que les empreintes 2.0 restent valides.
         if attachment_digests:
             data["attachments"] = sorted(attachment_digests)
+        if self.category:  # 2.2
+            data["category"] = self.category
         if self.number == 1 and self.intervention.rollback_of_id:
             data["rollback_of"] = self.intervention.rollback_of_id
         return data

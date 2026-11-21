@@ -13,25 +13,29 @@ FUTURE_TOLERANCE = timedelta(minutes=5)
 
 
 class InterventionForm(forms.Form):
-    kind = forms.ChoiceField(label="Type", choices=Version.KINDS, widget=forms.RadioSelect, initial=Version.NORMAL)
+    category = forms.ChoiceField(label="Catégorie", choices=Version.CATEGORIES, widget=forms.RadioSelect,
+                                 initial="config")
+    kind = forms.ChoiceField(label="Déroulement", choices=Version.KINDS, widget=forms.RadioSelect, initial=Version.NORMAL)
     title = forms.CharField(label="Titre", max_length=200)
     occurred_at = forms.DateTimeField(
         label="Date de l’intervention", widget=DATETIME_WIDGET,
         help_text="Pour une intervention planifiée : la date prévue.")
     elements = forms.ModelMultipleChoiceField(
         label="Éléments concernés", queryset=Element.objects.none(), widget=forms.CheckboxSelectMultiple)
-    change = forms.CharField(label="Modification", widget=forms.Textarea(attrs=TEXTAREA),
-                             help_text="Ce qui a été changé, concrètement.")
-    reason = forms.CharField(label="Motif", required=False, widget=forms.Textarea(attrs=TEXTAREA),
-                             help_text="Pourquoi : demande, incident, référence de ticket…")
-    impact = forms.CharField(label="Impact", required=False, widget=forms.Textarea(attrs=TEXTAREA),
-                             help_text="Services touchés, coupure éventuelle, utilisateurs concernés.")
-    verification = forms.CharField(label="Vérifications", required=False, widget=forms.Textarea(attrs=TEXTAREA),
-                                   help_text="Ce qui a été contrôlé après l’intervention, et le résultat.")
-    rollback = forms.CharField(label="Retour arrière", required=False, widget=forms.Textarea(attrs=TEXTAREA),
-                               help_text="Comment annuler la modification. Si c’est impossible, explique pourquoi.")
-    before_state = forms.CharField(label="État avant", required=False, widget=forms.Textarea(attrs=CODE_AREA))
-    after_state = forms.CharField(label="État après", required=False, widget=forms.Textarea(attrs=CODE_AREA))
+    change = forms.CharField(label="Ce qui a changé", widget=forms.Textarea(attrs={
+        **TEXTAREA, "placeholder": "Ex. GPO SEC-Block-NTLM liée à l’OU Serveurs : « Restreindre NTLM » = Refuser tout"}))
+    reason = forms.CharField(label="Pourquoi", required=False, widget=forms.Textarea(attrs={
+        **TEXTAREA, "placeholder": "Contexte, demande, ticket, incident…"}))
+    impact = forms.CharField(label="Impacts potentiels à surveiller", required=False, widget=forms.Textarea(attrs={
+        **TEXTAREA, "placeholder": "Ex. Risque sur les vieux applicatifs qui utilisent encore NTLM. « Aucun » si rien."}))
+    rollback = forms.CharField(label="Procédure de retour arrière", required=False, widget=forms.Textarea(attrs={
+        **TEXTAREA, "placeholder": "Ex. Délier la GPO SEC-Block-NTLM, ou repasser le paramètre en mode audit."}))
+    verification = forms.CharField(label="Vérifications effectuées", required=False,
+                                   widget=forms.Textarea(attrs=TEXTAREA))
+    before_state = forms.CharField(label="Avant", required=False, widget=forms.Textarea(attrs=CODE_AREA),
+                                   help_text="La première ligne sert de résumé dans le registre.")
+    after_state = forms.CharField(label="Après", required=False, widget=forms.Textarea(attrs=CODE_AREA),
+                                  help_text="La première ligne sert de résumé dans le registre.")
 
     def __init__(self, *args, current_elements=(), **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,7 +53,7 @@ class InterventionForm(forms.Form):
         if kind and kind != Version.URGENT:
             for name in Version.REQUIRED_FOR_COMPLETE:
                 if not (data.get(name) or "").strip():
-                    self.add_error(name, "Obligatoire, sauf pour une urgence à compléter plus tard.")
+                    self.add_error(name, "À renseigner, sauf pour une urgence à compléter plus tard.")
         return data
 
 
@@ -61,7 +65,7 @@ class CorrectionForm(InterventionForm):
 
 class CompleteForm(forms.Form):
     occurred_at = forms.DateTimeField(label="Date réelle de l’intervention", widget=DATETIME_WIDGET)
-    verification = forms.CharField(label="Vérifications", widget=forms.Textarea(attrs=TEXTAREA))
+    verification = forms.CharField(label="Vérifications effectuées", widget=forms.Textarea(attrs=TEXTAREA))
     note = forms.CharField(label="Commentaire", max_length=300, required=False)
 
     def clean_occurred_at(self):
@@ -77,9 +81,32 @@ class CancelForm(forms.Form):
 
 class FilterForm(forms.Form):
     q = forms.CharField(label="Recherche", required=False, max_length=200)
-    element = forms.ModelChoiceField(label="Élément", queryset=Element.objects.all(), required=False,
-                                     empty_label="Tous les éléments")
-    kind = forms.ChoiceField(label="Type", choices=[("", "Tous les types")] + Version.KINDS, required=False)
-    period = forms.ChoiceField(label="Période", required=False, choices=[
-        ("", "Toute période"), ("24h", "24 dernières heures"), ("48h", "48 dernières heures"),
-        ("7j", "7 derniers jours"), ("30j", "30 derniers jours")])
+    element = forms.TypedChoiceField(label="Élément", required=False, coerce=int, empty_value=None)
+    category = forms.ChoiceField(label="Catégorie", required=False, widget=forms.RadioSelect,
+                                 choices=[("", "Toutes")] + Version.CATEGORIES)
+    kind = forms.ChoiceField(label="Déroulement", required=False, widget=forms.RadioSelect,
+                             choices=[("", "Tous")] + Version.KINDS)
+    period = forms.ChoiceField(label="Période", required=False, widget=forms.RadioSelect, choices=[
+        ("", "Tout"), ("24h", "24 h"), ("48h", "48 h"), ("7j", "7 jours"), ("30j", "30 jours")])
+
+    def __init__(self, data=None, *args, **kwargs):
+        # Formulaire toujours lié : les valeurs absentes valent « tout », ce qui coche le bon bouton.
+        data = data.copy() if data is not None else {}
+        for key in ("q", "element", "category", "kind", "period"):
+            data.setdefault(key, "")
+        super().__init__(data, *args, **kwargs)
+        groups = {}
+        for element in Element.objects.order_by("group", "name"):
+            groups.setdefault(element.get_group_display(), []).append(
+                (element.pk, element.name + (" (archivé)" if element.archived else "")))
+        self.fields["element"].choices = [("", "Tous les éléments")] + list(groups.items())
+
+
+def element_groups(form):
+    """Éléments proposés dans le formulaire, regroupés par domaine, avec leur état coché."""
+    field = form["elements"]
+    selected = {str(v.pk if hasattr(v, "pk") else v) for v in (field.value() or [])}
+    groups = {}
+    for element in form.fields["elements"].queryset.order_by("group", "name"):
+        groups.setdefault(element.get_group_display(), []).append((element, str(element.pk) in selected))
+    return list(groups.items())

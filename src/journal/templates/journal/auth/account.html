@@ -9,16 +9,21 @@
     {% for field in form %}{% include "journal/includes/field.html" %}{% endfor %}
     <button type="submit" class="primary">Changer le mot de passe</button>
   </form>
+  <form method="post" action="{% url 'account_away' %}" class="card" novalidate>{% csrf_token %}
+    <h2>Disponibilité</h2>
+    {% include "journal/includes/field.html" with field=away_form.away_until %}
+    <button type="submit">Enregistrer</button>
+  </form>
   <section class="card">
     <h2>Double authentification (TOTP)</h2>
     {% if profile.totp_confirmed %}
-      <p><span class="tag done">Activée</span> · {{ recovery_left }} code{{ recovery_left|pluralize }} de secours restant{{ recovery_left|pluralize }}.</p>
+      <p><span class="tag applied soft">Activée</span> · {{ recovery_left }} code{{ recovery_left|pluralize }} de secours restant{{ recovery_left|pluralize }}.</p>
       <div class="actions">
         <form method="post" action="{% url 'recovery_regenerate' %}">{% csrf_token %}<button type="submit">Générer de nouveaux codes de secours</button></form>
         {% if not profile.totp_required %}<form method="post" action="{% url 'totp_disable' %}">{% csrf_token %}<button type="submit" class="danger">Désactiver</button></form>{% endif %}
       </div>
     {% else %}
-      <p><span class="tag warn">Désactivée</span></p>
+      <p><span class="tag watch soft">Désactivée</span></p>
       <a class="button primary" href="{% url 'totp_setup' %}">Activer le TOTP</a>
     {% endif %}
   </section>

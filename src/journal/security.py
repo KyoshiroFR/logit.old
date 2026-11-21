@@ -306,6 +306,24 @@ def password_initial(request):
     return render(request, "journal/auth/password_initial.html", {"form": form})
 
 
+class AwayForm(forms.Form):
+    away_until = forms.DateField(label="Absent jusqu’au (inclus)", required=False,
+                                 widget=forms.DateInput(attrs={"type": "date"}),
+                                 help_text="Congés, formation… Affiché sur tes fiches. Laisse vide si tu es présent.")
+
+
+@login_required
+@require_POST
+def account_away(request):
+    profile = profile_of(request.user)
+    form = AwayForm(request.POST)
+    if form.is_valid():
+        profile.away_until = form.cleaned_data["away_until"]
+        profile.save(update_fields=["away_until"])
+        messages.success(request, "Absence enregistrée." if profile.away_until else "Absence retirée.")
+    return redirect("account")
+
+
 @login_required
 @sensitive_post_parameters()
 @never_cache
@@ -319,7 +337,8 @@ def account(request):
         messages.success(request, "Mot de passe modifié.")
         return redirect("account")
     return render(request, "journal/auth/account.html", {
-        "form": form, "profile": profile, "recovery_left": len(profile.recovery_codes)})
+        "form": form, "profile": profile, "recovery_left": len(profile.recovery_codes),
+        "away_form": AwayForm(initial={"away_until": profile.away_until})})
 
 
 def health(request):
