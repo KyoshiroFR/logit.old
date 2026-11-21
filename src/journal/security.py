@@ -76,7 +76,7 @@ class SecurityGateMiddleware:
 
 
 class SecurityHeadersMiddleware:
-    CSP = ("default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
+    CSP = ("default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; "
            "object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 
     def __init__(self, get_response):

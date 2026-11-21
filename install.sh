@@ -17,7 +17,7 @@ set -Eeuo pipefail
 umask 027
 
 LOGIT_REPO="https://github.com/KyoshiroFR/logit.git"
-LOGIT_DEFAULT_REF="v1-refonte"  # passera à "v2.0.0" lors de la publication du tag
+LOGIT_DEFAULT_REF="v2.1"  # branche de test ; passera au tag (v2.1.0) lors de la publication
 # Empreinte Git du commit de la version : renseignée lors de la publication d'une version.
 LOGIT_DEFAULT_COMMIT=""
 
@@ -130,7 +130,7 @@ if [[ -f $DIR/.env ]]; then
         ok "Installation interrompue supprimée"
     elif command -v docker >/dev/null && [[ -n $(compose ps --status running -q app 2>/dev/null) ]]; then
         ok "LogIT fonctionne déjà. Aucune modification effectuée."
-        info "État : logit status   ·   Sauvegarde : logit backup"
+        info "Mise à jour : logit update   ·   État : logit status   ·   Sauvegarde : logit backup"
         exit 0
     else
         fail "LogIT est installé dans $DIR mais n’est pas démarré. Lance « logit start », ou consulte « logit logs »."
@@ -358,7 +358,7 @@ server {
     ssl_certificate     $TLS_DIR/logit.crt;
     ssl_certificate_key $TLS_DIR/logit.key;
     ssl_protocols TLSv1.2 TLSv1.3;
-    client_max_body_size 5m;
+    client_max_body_size 60m;  # 10 captures de 5 Mo
     location / {
         proxy_pass http://127.0.0.1:$APP_PORT;
         proxy_set_header Host \$http_host;
@@ -405,7 +405,7 @@ configure_apache() {
     ProxyPassReverse / http://127.0.0.1:$APP_PORT/
     RequestHeader set X-Forwarded-Proto "https"
     RequestHeader set X-Real-IP "%{REMOTE_ADDR}s"
-    LimitRequestBody 5242880
+    LimitRequestBody 62914560
 </VirtualHost>
 EOF
     (( ${#mods[@]} == 0 )) || a2enmod -q "${mods[@]}" >>"$LOG" 2>&1

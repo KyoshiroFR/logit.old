@@ -59,8 +59,28 @@ logit start | stop
 logit logs [lignes]
 logit backup            sauvegarde dans /var/backups/logit (automatique chaque nuit, 30 jours conservés)
 logit restore <fichier> restaure une sauvegarde (l’état actuel est sauvegardé avant)
+logit update [version]  met à jour (dernière version publiée par défaut)
 logit verify            vérifie la chaîne d’empreintes
 logit ca                certificat à importer sur les postes pour éviter l’alerte du navigateur
+```
+
+## Mise à jour
+
+```bash
+sudo logit update            # dernière version publiée
+sudo logit update v2.1.0     # une version précise
+```
+
+Dans l’ordre : sauvegarde de la base, récupération du code, construction de l’image, redémarrage avec les migrations, puis contrôle de santé et d’intégrité.
+- Si la construction échoue, rien n’est modifié.
+- Si le démarrage ou le contrôle d’intégrité échoue, LogIT revient **automatiquement** à la version précédente, avec la base restaurée depuis la sauvegarde faite juste avant.
+- Un retour à une version plus ancienne est refusé : les migrations de base ne se défont pas. On passe alors par `logit restore`.
+- Chaque mise à jour, réussie ou annulée, est inscrite dans le journal de sécurité.
+
+Une installation en 2.0, dont la commande `logit` ne connaît pas encore `update`, se met à jour une première fois avec la commande de la nouvelle version :
+
+```bash
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/KyoshiroFR/logit/main/deploy/logit)" logit update
 ```
 
 ## Fonctionnement
@@ -71,6 +91,9 @@ logit ca                certificat à importer sur les postes pour éviter l’a
 - **Deux dates** : la date d’intervention (déclarée) et la date d’enregistrement (posée par le serveur, non modifiable). Une fiche saisie plus de 15 minutes après l’intervention est signalée « saisie a posteriori ».
 - **Une correction n’écrase rien** : elle ajoute une version, avec son auteur, sa date et un motif obligatoire. L’historique montre les différences ligne par ligne. Une correction de l’impact ou du retour arrière est signalée en tête de fiche.
 - Une fiche ne se supprime pas : elle s’annule, avec un motif, et reste consultable.
+- **Captures** : colle une capture avec Ctrl+V n’importe où sur le formulaire, ou choisis des fichiers (PNG, JPEG, WebP, 5 Mo par image, 10 par fiche). Chaque fichier est vérifié comme une vraie image. Les captures sont immuables, rattachées à la version qui les a ajoutées et incluses dans la chaîne d’empreintes.
+- **Retour arrière lié** : depuis une fiche réalisée, « Consigner un retour arrière » crée une nouvelle fiche liée, préremplie avec la procédure de retour arrière et les états avant/après inversés. La fiche d’origine affiche alors « retour arrière effectué ».
+- **Depuis ta dernière visite** : l’accueil liste ce que les autres ont enregistré depuis ta dernière lecture (nouvelles fiches, corrections, réalisations, annulations, retours arrière). Une correction de l’impact ou du retour arrière est mise en avant. Le menu affiche le nombre de nouveautés. « Marquer comme lu » ne masque que ce qui était affiché.
 
 ### Les rôles
 

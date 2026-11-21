@@ -258,3 +258,141 @@ class AuthenticationTests(TestCase):
         self.assertEqual(response["X-Frame-Options"], "DENY")
         self.assertEqual(self.client.get("/sante/").content, b"ok")
         self.assertRedirects(self.client.get("/"), "https://testserver/", status_code=301, fetch_redirect_response=False)
+
+
+# --- 2.1 : captures, retour arrière lié, depuis ma dernière visite ------------------------
+
+from io import BytesIO
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image
+
+from .models import Attachment
+
+
+def png(name="capture.png", size=(40, 20), color="red"):
+    buffer = BytesIO()
+    Image.new("RGB", size, color).save(buffer, "PNG")
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/png")
+
+
+class CaptureTests(Base):
+    def test_capture_enregistree_servie_et_chainee(self):
+        self.post("/fiches/nouvelle/", self.fiche(attachments=[png(), png("deux.png", color="blue")]))
+        intervention = Intervention.objects.get()
+        captures = list(intervention.attachments.all())
+        self.assertEqual([(c.name, c.content_type, c.width, c.version.number) for c in captures],
+                         [("capture.png", "image/png", 40, 1), ("deux.png", "image/png", 40, 1)])
+        self.assertEqual(verify(), [])
+        self.client.force_login(make_user("rsi", role="reader"))
+        response = self.get(f"/captures/{captures[0].pk}/")
+        self.assertEqual((response.status_code, response["Content-Type"]), (200, "image/png"))
+        self.assertIn("sandbox", response["Content-Security-Policy"])
+        self.assertEqual(response.content, bytes(captures[0].data))
+        self.assertContains(self.get(f"/fiches/{intervention.pk}/"), f'/captures/{captures[1].pk}/')
+
+    def test_fichier_qui_n_est_pas_une_image_refuse(self):
+        fake = SimpleUploadedFile("piege.png", b"<script>alert(1)</script>", content_type="image/png")
+        response = self.post("/fiches/nouvelle/", self.fiche(attachments=[fake]))
+        self.assertContains(response, "n’est pas une image valide")
+        self.assertFalse(Intervention.objects.exists())
+        gif = BytesIO(); Image.new("RGB", (5, 5)).save(gif, "GIF")
+        response = self.post("/fiches/nouvelle/", self.fiche(attachments=[SimpleUploadedFile("a.gif", gif.getvalue())]))
+        self.assertContains(response, "seuls PNG, JPEG et WebP")
+
+    def test_limite_de_dix_captures_par_fiche(self):
+        self.post("/fiches/nouvelle/", self.fiche(attachments=[png(f"{i}.png") for i in range(8)]))
+        pk = Intervention.objects.get().pk
+        response = self.post(f"/fiches/{pk}/corriger/", self.fiche(note="ajout", attachments=[png(f"x{i}.png") for i in range(3)]))
+        self.assertContains(response, "10 captures au maximum")
+        self.assertEqual(Attachment.objects.count(), 8)
+
+    def test_correction_par_simple_ajout_de_capture(self):
+        self.post("/fiches/nouvelle/", self.fiche())
+        pk = Intervention.objects.get().pk
+        self.post(f"/fiches/{pk}/corriger/", self.fiche(note="Capture du résultat", attachments=[png("resultat.png")]))
+        current = Intervention.objects.get().current
+        self.assertEqual((current.number, current.attachments.get().name), (2, "resultat.png"))
+        self.assertContains(self.get(f"/fiches/{pk}/"), "Captures ajoutées")
+        self.assertEqual(verify(), [])
+
+    def test_capture_immuable_et_falsification_detectee(self):
+        self.post("/fiches/nouvelle/", self.fiche(attachments=[png()]))
+        with self.assertRaises(DatabaseError), transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute("UPDATE journal_attachment SET name = 'x'")
+        with connection.cursor() as cursor:
+            cursor.execute("SET CONSTRAINTS ALL IMMEDIATE")
+            cursor.execute("ALTER TABLE journal_attachment DISABLE TRIGGER journal_attachment_append_only")
+            cursor.execute("UPDATE journal_attachment SET data = %s", [png(color="green").read()])
+            cursor.execute("ALTER TABLE journal_attachment ENABLE TRIGGER journal_attachment_append_only")
+        problems = verify()
+        self.assertTrue(any("image altérée" in p for p in problems), problems)
+
+    def test_empreintes_2_0_inchangees_sans_capture_ni_retour(self):
+        self.post("/fiches/nouvelle/", self.fiche())
+        version = Intervention.objects.get().current
+        payload = version.payload([e.pk for e in version.elements.all()])
+        self.assertNotIn("attachments", payload)
+        self.assertNotIn("rollback_of", payload)
+
+
+class RollbackTests(Base):
+    def test_retour_arriere_lie_et_prerempli(self):
+        self.post("/fiches/nouvelle/", self.fiche())
+        original = Intervention.objects.get()
+        form = self.get(f"/fiches/{original.pk}/retour-arriere/").context["form"]
+        self.assertEqual(form.initial["change"], "Supprimer la règle 42")
+        self.assertEqual(form.initial["before_state"].strip(), "rule 41 allow\nrule 42 allow 443")
+        self.assertEqual(form.initial["title"], "Retour arrière : Ouverture port 443 vers DMZ")
+        self.post(f"/fiches/{original.pk}/retour-arriere/", self.fiche(
+            title="Retour arrière : port 443", change="Suppression règle 42", reason="Coupure VPN constatée"))
+        back = Intervention.objects.exclude(pk=original.pk).get()
+        self.assertEqual(back.rollback_of, original)
+        self.assertEqual(back.current.payload([])["rollback_of"], original.pk)
+        self.assertContains(self.get(f"/fiches/{original.pk}/"), f"Retour arrière consigné le")
+        self.assertContains(self.get(f"/fiches/{back.pk}/"), f"retour arrière de la <a href=\"/fiches/{original.pk}/\">")
+        self.assertContains(self.get("/"), "Retour arrière effectué")
+        self.assertEqual(verify(), [])
+
+    def test_pas_de_retour_arriere_sur_une_planifiee(self):
+        future = (timezone.localtime() + timedelta(hours=3)).strftime(FMT)
+        self.post("/fiches/nouvelle/", self.fiche(kind="planned", occurred_at=future))
+        pk = Intervention.objects.get().pk
+        self.assertRedirects(self.get(f"/fiches/{pk}/retour-arriere/"), f"/fiches/{pk}/", fetch_redirect_response=False)
+        self.client.force_login(make_user("lecteur", role="reader"))
+        self.assertEqual(self.get(f"/fiches/{pk}/retour-arriere/").status_code, 403)
+
+
+class SinceLastVisitTests(Base):
+    def test_nouveautes_des_autres_puis_marquer_comme_lu(self):
+        self.post("/fiches/nouvelle/", self.fiche(title="Ma propre fiche"))
+        bob = make_user("bob")
+        self.client.force_login(bob)
+        self.post("/fiches/nouvelle/", self.fiche(title="Fiche de Bob"))
+        pk = Intervention.objects.get(versions__title="Fiche de Bob").pk
+        self.post(f"/fiches/{pk}/corriger/", self.fiche(title="Fiche de Bob", rollback="Nouvelle procédure", note="précision"))
+        self.client.force_login(self.alice)
+        home = self.get("/")
+        titles = [i["version"].title for i in home.context["unseen"]]
+        self.assertEqual(titles, ["Fiche de Bob", "Fiche de Bob"])
+        correction = home.context["unseen"][0]
+        self.assertEqual((correction["label"], correction["sensitive"]), ("Correction", ["retour arrière"]))
+        self.assertContains(home, "retour arrière modifié")
+        self.assertContains(home, 'class="badge"')
+        self.post("/nouveautes/lu/", {"upto": home.context["unseen_upto"]})
+        home = self.get("/")
+        self.assertEqual(home.context["unseen"], [])
+        self.assertNotContains(home, 'class="badge"')
+
+    def test_marquer_comme_lu_ne_saute_pas_les_versions_arrivees_entre_temps(self):
+        bob = make_user("bob")
+        self.client.force_login(bob)
+        self.post("/fiches/nouvelle/", self.fiche(title="Première"))
+        self.client.force_login(self.alice)
+        upto = self.get("/").context["unseen_upto"]
+        self.client.force_login(bob)
+        self.post("/fiches/nouvelle/", self.fiche(title="Arrivée pendant la lecture"))
+        self.client.force_login(self.alice)
+        self.post("/nouveautes/lu/", {"upto": upto})
+        self.assertEqual([i["version"].title for i in self.get("/").context["unseen"]], ["Arrivée pendant la lecture"])

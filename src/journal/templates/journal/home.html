@@ -14,6 +14,17 @@
   <div class="actions"><button type="submit" class="primary">Filtrer</button>{% if filters_active %}<a class="button" href="{% url 'home' %}">Effacer</a>{% endif %}</div>
 </form>
 
+{% if unseen %}<section class="card unseen">
+  <div class="page-head"><h2>Depuis ta dernière visite <span class="tag planned">{{ unseen|length }}</span></h2>
+  <form method="post" action="{% url 'mark_read' %}">{% csrf_token %}<input type="hidden" name="upto" value="{{ unseen_upto }}"><button type="submit">Marquer comme lu</button></form></div>
+  <ul class="compact-list">{% for item in unseen %}<li>
+    <span><span class="tag{% if item.label == 'Retour arrière' or item.label == 'Annulation' %} urgent{% elif item.sensitive %} warn{% endif %}">{{ item.label }}</span>
+      <a href="{% url 'detail' item.version.intervention_id %}">n° {{ item.version.intervention_id }} · {{ item.version.title }}</a>
+      {% if item.sensitive %}<strong class="small">— {{ item.sensitive|join:" et " }} modifié{{ item.sensitive|length|pluralize }}</strong>{% endif %}</span>
+    <span class="muted small when">{{ item.version.recorded_at|date:"d/m H:i" }} · {{ item.version.author }}</span>
+  </li>{% endfor %}</ul>
+</section>{% endif %}
+
 {% if not filters_active and to_complete or not filters_active and upcoming %}
 <div class="grid-2">
   {% if to_complete %}<section class="card"><h2>À compléter <span class="tag warn">{{ to_complete|length }}</span></h2>
@@ -34,7 +45,7 @@
       <tr>
         <td class="muted">{{ v.intervention_id }}</td>
         <td class="when">{{ v.occurred_at|date:"d/m/Y H:i" }}</td>
-        <td><a class="rowlink" href="{% url 'detail' v.intervention_id %}">{{ v.title }}</a><div>{% include "journal/includes/tags.html" %}</div></td>
+        <td><a class="rowlink" href="{% url 'detail' v.intervention_id %}">{{ v.title }}</a><div>{% include "journal/includes/tags.html" %}{% if v.intervention_id in rolled_back %} <span class="tag urgent">Retour arrière effectué</span>{% endif %}{% if v.intervention.rollback_of_id %} <span class="tag">retour de n° {{ v.intervention.rollback_of_id }}</span>{% endif %}</div></td>
         <td class="small">{% for e in v.elements.all %}{{ e.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
         <td class="small">{{ v.intervention.created_by }}</td>
       </tr>{% endfor %}</tbody>

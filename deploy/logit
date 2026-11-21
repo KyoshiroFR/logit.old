@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Exploitation de LogIT : logit status | start | stop | logs | backup | restore <fichier> | verify | ca
+# Exploitation de LogIT. « logit help » pour la liste des commandes.
 # shellcheck disable=SC1112,SC2012
 set -Eeuo pipefail
 LOGIT_DIR=/opt/logit
@@ -8,22 +8,132 @@ RETENTION_DAYS=30
 
 (( EUID == 0 )) || { echo "À lancer en root (sudo logit …)." >&2; exit 1; }
 [[ -f $LOGIT_DIR/.env ]] || { echo "LogIT introuvable dans $LOGIT_DIR." >&2; exit 1; }
+
+if [[ -t 1 ]]; then B=$'\e[1m'; G=$'\e[32m'; Y=$'\e[33m'; R=$'\e[31m'; N=$'\e[0m'; else B='' G='' Y='' R='' N=''; fi
+say()  { printf '%s==>%s %s\n' "$B" "$N" "$*"; }
+ok()   { printf '    %s✔%s %s\n' "$G" "$N" "$*"; }
+die()  { printf '%sErreur :%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
+
 env_value() { sed -n "s/^$1=//p" "$LOGIT_DIR/.env" | tr -d '"'; }
+env_set() { sed -i "s|^$1=.*|$1=$2|" "$LOGIT_DIR/.env"; }
 compose() {
     local files=() f
     IFS=: read -ra list <<<"$(env_value COMPOSE_FILE)"
     for f in "${list[@]}"; do files+=(-f "$f"); done
     docker compose --project-name logit --project-directory "$LOGIT_DIR/deploy" --env-file "$LOGIT_DIR/.env" "${files[@]}" "$@"
 }
-start() {
-    compose up -d
+manage() { compose exec -T app logit-entrypoint "$@"; }
+journal() {  # journal <action> <détails JSON> : trace l'opération dans le journal de sécurité de LogIT
+    manage audit_event "$1" --target "$(hostname -s 2>/dev/null || echo serveur)" --details "$2" >/dev/null 2>&1 || true
+}
+
+wait_healthy() {
     local id
-    for _ in $(seq 1 90); do
-        id=$(compose ps -q app)
-        [[ -n $id && $(docker inspect -f '{{.State.Health.Status}}' "$id" 2>/dev/null) == healthy ]] && { echo "LogIT démarré."; return 0; }
+    for _ in $(seq 1 "${1:-90}"); do
+        id=$(compose ps -q app 2>/dev/null || true)
+        [[ -n $id && $(docker inspect -f '{{.State.Health.Status}}' "$id" 2>/dev/null) == healthy ]] && return 0
         sleep 2
     done
-    echo "LogIT ne démarre pas : logit logs" >&2; return 1
+    return 1
+}
+
+start() {
+    compose up -d
+    wait_healthy || die "LogIT ne démarre pas : logit logs"
+    echo "LogIT démarré."
+}
+
+backup() {  # affiche le chemin de la sauvegarde
+    install -d -m 700 "$BACKUP_DIR"
+    local file
+    file="$BACKUP_DIR/logit-$(date +%Y%m%d-%H%M%S).dump"
+    compose exec -T db pg_dump -U logit_owner -d logit --format=custom >"$file.part"
+    mv "$file.part" "$file"; chmod 600 "$file"
+    find "$BACKUP_DIR" -name 'logit-*.dump' -mtime +"$RETENTION_DAYS" -delete
+    printf '%s\n' "$file"
+}
+
+restore_db() {  # remplace la base par une sauvegarde (sans confirmation)
+    compose stop app >/dev/null 2>&1 || true
+    compose exec -T db dropdb -U logit_owner --if-exists --force logit
+    compose exec -T db createdb -U logit_owner logit
+    compose exec -T db pg_restore -U logit_owner -d logit --no-owner --exit-on-error <"$1"
+}
+
+is_release() { [[ $1 =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; }
+
+update() {
+    local target="" assume_yes=0 arg answer
+    for arg in "$@"; do
+        case $arg in --yes|-y) assume_yes=1 ;; *) target=$arg ;; esac
+    done
+    local current_ref current_commit
+    current_ref=$(env_value LOGIT_VERSION); current_commit=$(env_value LOGIT_COMMIT)
+
+    say "Recherche de la version"
+    if [[ -z $target ]]; then
+        target=$(git -C "$LOGIT_DIR" ls-remote --tags --refs origin 'v*' 2>/dev/null | sed 's#.*refs/tags/##' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
+        [[ -n $target ]] || die "aucune version publiée trouvée. Précise-la : logit update <version>"
+    fi
+    if is_release "$target" && is_release "$current_ref" && [[ $target != "$current_ref" ]] && \
+        [[ $(printf '%s\n%s\n' "$target" "$current_ref" | sort -V | head -n1) == "$target" ]]; then
+        die "$target est plus ancienne que $current_ref. Revenir en arrière se fait en restaurant une sauvegarde (logit restore)."
+    fi
+    (umask 022 && git -C "$LOGIT_DIR" fetch --quiet --depth 1 origin "$target") || die "version $target introuvable sur le dépôt."
+    local new_commit
+    new_commit=$(git -C "$LOGIT_DIR" rev-parse FETCH_HEAD)
+    if [[ $new_commit == "$current_commit" ]]; then
+        ok "Déjà à jour : $current_ref (commit ${current_commit:0:12})."
+        return 0
+    fi
+    printf '    Installée : %s (commit %s)\n    Cible     : %s (commit %s)\n' \
+        "$current_ref" "${current_commit:0:12}" "$target" "${new_commit:0:12}"
+    if (( ! assume_yes )) && [[ -t 0 ]]; then
+        read -r -p "    Mettre à jour ? Une sauvegarde est faite avant. (oui/non) [oui] : " answer
+        [[ ${answer:-oui} == oui ]] || { echo "Abandon."; return 1; }
+    fi
+
+    say "Sauvegarde avant mise à jour"
+    local dump
+    dump=$(backup)
+    ok "$dump"
+
+    say "Récupération du code $target"
+    (umask 022 && git -C "$LOGIT_DIR" checkout --quiet --detach FETCH_HEAD)
+    env_set LOGIT_VERSION "$target"; env_set LOGIT_COMMIT "$new_commit"
+
+    revert_code() {
+        (umask 022 && git -C "$LOGIT_DIR" checkout --quiet --detach "$current_commit")
+        env_set LOGIT_VERSION "$current_ref"; env_set LOGIT_COMMIT "$current_commit"
+    }
+
+    say "Construction de l’image"
+    if ! compose build >/dev/null 2>&1; then
+        revert_code
+        die "la construction de $target a échoué. Rien n’a été modifié : LogIT tourne toujours en $current_ref."
+    fi
+
+    say "Redémarrage et migrations"
+    if compose up -d >/dev/null 2>&1 && wait_healthy 120 && manage verify_chain >/dev/null 2>&1; then
+        install -m 0755 "$LOGIT_DIR/deploy/logit" /usr/local/bin/logit.new
+        sed -i "s|^LOGIT_DIR=.*|LOGIT_DIR=$LOGIT_DIR|" /usr/local/bin/logit.new
+        mv /usr/local/bin/logit.new /usr/local/bin/logit
+        journal version_updated "{\"de\": \"$current_ref\", \"vers\": \"$target\", \"commit\": \"$new_commit\", \"sauvegarde\": \"$dump\"}"
+        ok "LogIT est à jour : $target (commit ${new_commit:0:12}). Intégrité vérifiée."
+        return 0
+    fi
+
+    printf '\n%s!%s Échec du démarrage de %s. Retour automatique à %s…\n' "$Y" "$N" "$target" "$current_ref" >&2
+    compose logs --no-color --tail 15 migrate app 2>&1 | sed 's/^/    /' >&2 || true
+    revert_code
+    restore_db "$dump"
+    compose up -d >/dev/null 2>&1 || true
+    if wait_healthy 120; then
+        journal version_update_failed "{\"de\": \"$current_ref\", \"vers\": \"$target\", \"retour\": \"automatique\", \"sauvegarde\": \"$dump\"}"
+        die "mise à jour annulée. LogIT est revenu à $current_ref avec la base d’avant la mise à jour ($dump)."
+    fi
+    die "le retour à $current_ref a échoué. Sauvegarde intacte : $dump. Diagnostic : logit logs"
 }
 
 case "${1:-help}" in
@@ -36,29 +146,24 @@ case "${1:-help}" in
     stop) compose stop ;;
     logs) compose logs --tail "${2:-200}" ;;
     backup)
-        install -d -m 700 "$BACKUP_DIR"
-        file="$BACKUP_DIR/logit-$(date +%Y%m%d-%H%M%S).dump"
-        compose exec -T db pg_dump -U logit_owner -d logit --format=custom >"$file.part"
-        mv "$file.part" "$file"; chmod 600 "$file"
-        find "$BACKUP_DIR" -name 'logit-*.dump' -mtime +"$RETENTION_DAYS" -delete
+        file=$(backup)
         [[ ${2:-} == --quiet ]] || echo "Sauvegarde : $file ($(du -h "$file" | cut -f1))"
         ;;
     restore)
         file=${2:?Usage : logit restore <fichier.dump>}
-        [[ -f $file ]] || { echo "Fichier introuvable : $file" >&2; exit 1; }
+        [[ -f $file ]] || die "fichier introuvable : $file"
         echo "La base actuelle sera remplacée par $file."
         read -r -p "Tape RESTAURER pour confirmer : " answer
         [[ $answer == RESTAURER ]] || { echo "Abandon."; exit 1; }
-        "$0" backup
-        compose stop app
-        compose exec -T db dropdb -U logit_owner --if-exists --force logit
-        compose exec -T db createdb -U logit_owner logit
-        compose exec -T db pg_restore -U logit_owner -d logit --no-owner --exit-on-error <"$file"
+        echo "Sauvegarde de l’état actuel : $(backup)"
+        restore_db "$file"
         start
+        journal backup_restored "{\"fichier\": \"$file\"}"
         echo "Restauration terminée. Vérification d’intégrité :"
-        compose exec -T app logit-entrypoint verify_chain
+        manage verify_chain
         ;;
-    verify) compose exec -T app logit-entrypoint verify_chain ;;
+    update) shift; update "$@" ;;
+    verify) manage verify_chain ;;
     ca)
         if [[ $(env_value LOGIT_MODE) == caddy ]]; then
             compose exec -T proxy cat /data/caddy/pki/authorities/local/root.crt
@@ -69,13 +174,16 @@ case "${1:-help}" in
     *)
         cat <<EOF
 Usage : logit <commande>
-  status            état des services, version, dernière sauvegarde
-  start | stop      démarrer ou arrêter LogIT
-  logs [lignes]     journaux des conteneurs
-  backup            sauvegarde de la base dans $BACKUP_DIR ($RETENTION_DAYS jours conservés)
-  restore <fichier> restaure une sauvegarde (une sauvegarde de l'état actuel est faite avant)
-  verify            vérifie la chaîne d'empreintes des fiches et du journal
-  ca                affiche le certificat à importer sur les postes
+  status              état des services, version, dernière sauvegarde
+  start | stop        démarrer ou arrêter LogIT
+  logs [lignes]       journaux des conteneurs
+  backup              sauvegarde de la base dans $BACKUP_DIR ($RETENTION_DAYS jours conservés)
+  restore <fichier>   restaure une sauvegarde (l'état actuel est sauvegardé avant)
+  update [version]    met à jour vers la dernière version publiée (ou celle indiquée) :
+                      sauvegarde, construction, migrations, contrôle d'intégrité,
+                      et retour automatique à la version précédente en cas d'échec
+  verify              vérifie la chaîne d'empreintes des fiches et du journal
+  ca                  affiche le certificat à importer sur les postes
 EOF
         ;;
 esac

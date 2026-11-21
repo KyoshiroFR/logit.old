@@ -9,6 +9,9 @@ urlpatterns = [
     path("fiches/<int:pk>/corriger/", views.correct, name="correct"),
     path("fiches/<int:pk>/realisee/", views.complete, name="complete"),
     path("fiches/<int:pk>/annuler/", views.cancel, name="cancel"),
+    path("fiches/<int:pk>/retour-arriere/", views.rollback, name="rollback"),
+    path("captures/<int:pk>/", views.attachment, name="attachment"),
+    path("nouveautes/lu/", views.mark_read, name="mark_read"),
 
     path("connexion/", security.login_view, name="login"),
     path("connexion/code/", security.totp_verify, name="totp_verify"),
