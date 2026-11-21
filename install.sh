@@ -17,7 +17,7 @@ set -Eeuo pipefail
 umask 027
 
 LOGIT_REPO="https://github.com/KyoshiroFR/logit.git"
-LOGIT_DEFAULT_REF="v2.3-bugs"  # branche de test ; passera au tag lors de la publication
+LOGIT_DEFAULT_REF="v0.1.0"
 # Empreinte Git du commit de la version : renseignée lors de la publication d'une version.
 LOGIT_DEFAULT_COMMIT=""
 
