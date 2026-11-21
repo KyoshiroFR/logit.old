@@ -36,8 +36,8 @@ class ConcurrentEdit(Exception):
     """La fiche a reçu une autre version pendant la saisie."""
 
 
-def append_version(version, element_ids):
-    """Enregistre une version en fin de chaîne. Doit être appelée dans une transaction."""
+def append_version(version, element_ids, attachments=()):
+    """Enregistre une version (et ses captures) en fin de chaîne. Doit être appelée dans une transaction."""
     from .models import Version
 
     assert transaction.get_connection().in_atomic_block
@@ -48,9 +48,13 @@ def append_version(version, element_ids):
     last = Version.objects.order_by("-pk").values_list("hash", flat=True).first()
     version.prev_hash = last or GENESIS
     version.recorded_at = timezone.now()
-    version.hash = version.compute_hash(element_ids)
+    version.hash = version.compute_hash(element_ids, [a.sha256 for a in attachments])
     version.save(force_insert=True)
     version.elements.set(element_ids)
+    for attachment in attachments:
+        attachment.intervention_id, attachment.version = version.intervention_id, version
+        attachment.uploader_id, attachment.recorded_at = version.author_id, version.recorded_at
+        attachment.save(force_insert=True)
     return version
 
 
@@ -88,11 +92,16 @@ def verify():
 
     problems = []
     previous = GENESIS
-    for version in Version.objects.order_by("pk").prefetch_related("elements"):
+    for version in Version.objects.order_by("pk").prefetch_related("elements", "attachments"):
         ids = [e.pk for e in version.elements.all()]
+        digests = []
+        for attachment in version.attachments.all():
+            digests.append(attachment.sha256)
+            if hashlib.sha256(bytes(attachment.data)).hexdigest() != attachment.sha256:
+                problems.append(f"Capture #{attachment.pk} (fiche {attachment.intervention_id}) : image altérée.")
         if version.prev_hash != previous:
             problems.append(f"Version #{version.pk} : maillon manquant ou réordonné avant cette version.")
-        if version.compute_hash(ids) != version.hash:
+        if version.compute_hash(ids, digests) != version.hash:
             problems.append(f"Version #{version.pk} (fiche {version.intervention_id}, v{version.number}) : contenu altéré.")
         previous = version.hash
     previous = GENESIS

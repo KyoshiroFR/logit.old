@@ -10,7 +10,8 @@ from django.core.management.base import BaseCommand
 from django.db import connection
 from psycopg import sql
 
-APPEND_ONLY = ["journal_intervention", "journal_version", "journal_version_elements", "journal_auditevent"]
+APPEND_ONLY = ["journal_intervention", "journal_version", "journal_version_elements", "journal_auditevent",
+               "journal_attachment"]
 READ_ONLY = ["django_migrations", "django_content_type", "auth_permission"]
 
 

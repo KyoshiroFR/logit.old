@@ -47,6 +47,8 @@ class Intervention(models.Model):
 
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     recorded_at = models.DateTimeField("date d’enregistrement")
+    # Fiche de retour arrière : la fiche d'origine qu'elle annule.
+    rollback_of = models.ForeignKey("self", on_delete=models.PROTECT, null=True, blank=True, related_name="rollbacks")
 
     class Meta:
         ordering = ["-pk"]
@@ -110,18 +112,56 @@ class Version(models.Model):
         limit = timedelta(minutes=settings.LOGIT_LATE_ENTRY_MINUTES)
         return self.kind != self.PLANNED and first - self.occurred_at > limit
 
-    def payload(self, element_ids):
+    def payload(self, element_ids, attachment_digests=()):
         data = {f: getattr(self, f) for f in self.CONTENT_FIELDS}
         data.update(
             intervention=self.intervention_id, number=self.number, action=self.action, note=self.note,
             author=self.author_id, recorded_at=self.recorded_at, elements=sorted(element_ids),
         )
+        # Clés ajoutées en 2.1 : présentes seulement si utilisées, pour que les empreintes 2.0 restent valides.
+        if attachment_digests:
+            data["attachments"] = sorted(attachment_digests)
+        if self.number == 1 and self.intervention.rollback_of_id:
+            data["rollback_of"] = self.intervention.rollback_of_id
         return data
 
-    def compute_hash(self, element_ids=None):
+    def compute_hash(self, element_ids=None, attachment_digests=None):
         if element_ids is None:
             element_ids = list(self.elements.values_list("pk", flat=True))
-        return canonical_hash(self.prev_hash, self.payload(element_ids))
+        if attachment_digests is None:
+            attachment_digests = [a.sha256 for a in self.attachments.all()]
+        return canonical_hash(self.prev_hash, self.payload(element_ids, attachment_digests))
+
+
+class Attachment(models.Model):
+    """Capture jointe à une fiche, ajoutée avec une version. Immuable comme les versions."""
+
+    MAX_BYTES = 5 * 1024 * 1024
+    MAX_PER_INTERVENTION = 10
+    TYPES = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
+
+    intervention = models.ForeignKey(Intervention, on_delete=models.PROTECT, related_name="attachments")
+    version = models.ForeignKey(Version, on_delete=models.PROTECT, related_name="attachments")
+    uploader = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    recorded_at = models.DateTimeField()
+    name = models.CharField(max_length=200)
+    content_type = models.CharField(max_length=20)
+    size = models.PositiveIntegerField()
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    sha256 = models.CharField(max_length=64)
+    data = models.BinaryField()
+
+    class Meta:
+        ordering = ["pk"]
+
+
+class ReadMarker(models.Model):
+    """Dernière version vue par un utilisateur, pour « depuis ma dernière visite » (modifiable)."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="read_marker")
+    last_version_id = models.BigIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
 class AuditEvent(models.Model):

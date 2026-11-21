@@ -13,7 +13,7 @@
 <header class="topbar"><div class="inner">
   <a class="brand" href="{% url 'home' %}">Log<span>IT</span></a>
   <nav class="nav" aria-label="Navigation principale">
-    <a href="{% url 'home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Registre</a>
+    <a href="{% url 'home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Registre{% if unseen_count %} <span class="badge" title="Nouveautés depuis ta dernière visite">{{ unseen_count }}</span>{% endif %}</a>
     {% if can_write %}<a href="{% url 'create' %}" {% if request.resolver_match.url_name == 'create' %}class="active"{% endif %}>Nouvelle fiche</a>{% endif %}
     {% if is_admin %}
       <a href="{% url 'admin_users' %}" {% if 'admin_user' in request.resolver_match.url_name %}class="active"{% endif %}>Comptes</a>

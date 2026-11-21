@@ -1,12 +1,14 @@
 {% extends "journal/base.html" %}
-{% block title %}{% if mode == 'create' %}Nouvelle fiche{% else %}Corriger la fiche n° {{ current.intervention_id }}{% endif %}{% endblock %}
+{% block title %}{% if rollback_source %}Retour arrière{% elif mode == 'create' %}Nouvelle fiche{% else %}Corriger la fiche n° {{ current.intervention_id }}{% endif %}{% endblock %}
 {% block content %}
 <div class="page-head"><div>
-  {% if mode == 'create' %}<h1>Nouvelle fiche</h1><p class="muted">La date d’enregistrement est posée automatiquement par le serveur.</p>
+  {% if rollback_source %}<p class="muted small"><a href="{% url 'detail' rollback_source.intervention_id %}">Fiche n° {{ rollback_source.intervention_id }}</a> / Retour arrière</p>
+  <h1>Consigner un retour arrière</h1><p class="muted">Cette nouvelle fiche sera liée à la fiche n° {{ rollback_source.intervention_id }}. Elle est préremplie avec sa procédure de retour arrière et ses états avant/après inversés : vérifie et complète.</p>
+  {% elif mode == 'create' %}<h1>Nouvelle fiche</h1><p class="muted">La date d’enregistrement est posée automatiquement par le serveur.</p>
   {% else %}<p class="muted small"><a href="{% url 'detail' current.intervention_id %}">Fiche n° {{ current.intervention_id }}</a> / Correction</p><h1>Corriger : {{ current.title }}</h1>
   <p class="muted">La version actuelle reste conservée. Ta correction crée la version {{ current.number|add:1 }}, visible dans l’historique.</p>{% endif %}
 </div></div>
-<form method="post" class="medium" novalidate>{% csrf_token %}
+<form method="post" class="medium" enctype="multipart/form-data" novalidate>{% csrf_token %}
   {{ form.non_field_errors }}
   {% if form.note %}<section class="card">{% include "journal/includes/field.html" with field=form.note %}</section>{% endif %}
   <section class="card">
@@ -38,6 +40,12 @@
       {% include "journal/includes/field.html" with field=form.before_state %}
       {% include "journal/includes/field.html" with field=form.after_state %}
     </div>
+  </section>
+  <section class="card">
+    <h2>Captures <span class="muted small">(facultatif)</span></h2>
+    <p class="muted small">Colle une capture avec <kbd>Ctrl</kbd>+<kbd>V</kbd> n’importe où sur la page, ou choisis des fichiers. PNG, JPEG ou WebP, 5 Mo par image, 10 par fiche.{% if mode == 'correct' %} Les captures existantes sont conservées.{% endif %}</p>
+    <input type="file" name="attachments" id="attachments" accept="image/png,image/jpeg,image/webp" multiple>
+    <div class="previews" id="attachment-previews" aria-live="polite"></div>
   </section>
   <div class="actions"><button type="submit" class="primary">{% if mode == 'create' %}Enregistrer la fiche{% else %}Enregistrer la correction{% endif %}</button>
     <a class="button" href="{% if mode == 'create' %}{% url 'home' %}{% else %}{% url 'detail' current.intervention_id %}{% endif %}">Annuler</a></div>
