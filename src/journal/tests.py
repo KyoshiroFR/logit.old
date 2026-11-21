@@ -480,3 +480,89 @@ class InterfaceTests(Base):
         self.assertIn("script-src 'self'", csp)
         self.assertIn("style-src 'self'", csp)
         self.assertNotIn("unsafe-inline", csp)
+
+
+# --- 2.3 : signaler un bug ----------------------------------------------------------------
+
+from urllib.parse import parse_qs, urlparse
+
+from .models import BugReport
+
+
+class BugReportTests(Base):
+    def bug(self, **extra):
+        data = {"title": "Le filtre 7 jours ne réagit pas", "description": "Clic sans effet.", "bug_type": "function",
+                "priority": "medium", "environment": "Chrome 153, Windows 11", "page": "/?period=7j"}
+        data.update(extra)
+        return data
+
+    def test_signalement_en_direct_et_capture(self):
+        response = self.client.post("/bugs/signaler/", self.bug(screenshot=png("erreur.png")), secure=True,
+                                    HTTP_X_REQUESTED_WITH="fetch")
+        bug = BugReport.objects.get()
+        self.assertEqual(response.json(), {"ok": True, "id": bug.pk})
+        self.assertEqual((bug.reporter, bug.priority, bug.bug_type, bug.page, bug.screenshot_name),
+                         (self.alice, "medium", "function", "/?period=7j", "erreur.png"))
+        self.assertTrue(AuditEvent.objects.filter(action="bug_reported", actor=self.alice).exists())
+        self.assertEqual(self.get(f"/bugs/{bug.pk}/capture/").status_code, 200)  # l'auteur voit sa capture
+
+    def test_lecteur_peut_signaler_sans_javascript(self):
+        self.client.force_login(make_user("rsi", role="reader"))
+        response = self.post("/bugs/signaler/", self.bug())
+        self.assertRedirects(response, "/", fetch_redirect_response=False)
+        self.assertEqual(BugReport.objects.count(), 1)
+
+    def test_erreurs_renvoyees_et_fichier_piege_refuse(self):
+        response = self.client.post("/bugs/signaler/", self.bug(title=""), secure=True, HTTP_X_REQUESTED_WITH="fetch")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("title", response.json()["errors"])
+        fake = SimpleUploadedFile("x.png", b"<svg onload=alert(1)>", content_type="image/png")
+        response = self.client.post("/bugs/signaler/", self.bug(screenshot=fake), secure=True, HTTP_X_REQUESTED_WITH="fetch")
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(BugReport.objects.exists())
+
+    def test_page_externe_ignoree_et_limite_horaire(self):
+        self.post("/bugs/signaler/", self.bug(page="//evil.example/"))
+        self.assertEqual(BugReport.objects.get().page, "")
+        with self.settings(LOGIT_BUG_REPORTS_PER_HOUR=1):
+            response = self.client.post("/bugs/signaler/", self.bug(), secure=True, HTTP_X_REQUESTED_WITH="fetch")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(BugReport.objects.count(), 1)
+
+    def test_suivi_reserve_aux_admins(self):
+        self.post("/bugs/signaler/", self.bug(screenshot=png()))
+        bug = BugReport.objects.get()
+        for url in ("/admin/bugs/", f"/admin/bugs/{bug.pk}/"):
+            self.assertEqual(self.get(url).status_code, 403)
+        self.client.force_login(make_user("bob"))
+        self.assertEqual(self.get(f"/bugs/{bug.pk}/capture/").status_code, 403)  # pas sa capture
+        admin = make_user("chef", role="admin")
+        self.client.force_login(admin)
+        self.assertContains(self.get("/"), 'class="badge warn"')
+        self.assertContains(self.get("/admin/bugs/"), "Le filtre 7 jours ne réagit pas")
+        self.post(f"/admin/bugs/{bug.pk}/", {"status": "resolved", "admin_note": "Corrigé en 2.3.1"})
+        bug.refresh_from_db()
+        self.assertEqual(bug.status, "resolved")
+        self.assertTrue(AuditEvent.objects.filter(action="bug_status_changed", actor=admin).exists())
+        self.assertNotContains(self.get("/admin/bugs/"), "Le filtre 7 jours")  # résolu : plus « à traiter »
+        self.assertContains(self.get("/admin/bugs/", statut="all"), "Le filtre 7 jours")
+
+    def test_issue_github_sans_capture_ni_page_interne(self):
+        self.post("/bugs/signaler/", self.bug(screenshot=png(), page="/fiches/12/"))
+        admin = make_user("chef", role="admin")
+        self.client.force_login(admin)
+        url = self.get(f"/admin/bugs/{BugReport.objects.get().pk}/").context["github_url"]
+        parsed = urlparse(url)
+        self.assertEqual(parsed.netloc + parsed.path, "github.com/KyoshiroFR/logit/issues/new")
+        params = parse_qs(parsed.query)
+        self.assertEqual(params["title"], ["Le filtre 7 jours ne réagit pas"])
+        body = params["body"][0]
+        self.assertIn("Clic sans effet.", body)
+        self.assertNotIn("/fiches/12/", body)
+        self.assertNotIn("capture", body.lower().replace("capture d", ""))
+
+    def test_fenetre_presente_sur_chaque_page(self):
+        page = self.get("/")
+        self.assertContains(page, 'id="bug-dialog"')
+        self.assertContains(page, 'data-open-bug')
+        self.assertNotContains(self.get("/bugs/signaler/"), 'id="bug-dialog"')

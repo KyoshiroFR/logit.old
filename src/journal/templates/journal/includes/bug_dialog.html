@@ -1,0 +1,15 @@
+<dialog class="bug-dialog" id="bug-dialog" aria-labelledby="bug-dialog-title">
+  <form method="post" action="{% url 'bug_report' %}" enctype="multipart/form-data" class="bug-form" novalidate data-bug-form>
+    <header class="bug-head">
+      <span class="bug-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9h8v6a4 4 0 0 1-8 0V9z"/><path d="M9 9V7a3 3 0 0 1 6 0v2M4 13h4M16 13h4M5 8l3 2M19 8l-3 2M5 19l3-2M19 19l-3-2M12 11v7"/></svg></span>
+      <div><h2 id="bug-dialog-title">Signaler un bug</h2><p class="muted small">Aide-nous à améliorer LogIT.</p></div>
+      <button type="button" class="bug-close" data-bug-close aria-label="Fermer">✕</button>
+    </header>
+    <div class="bug-body">{% include "journal/bugs/form_fields.html" %}</div>
+    <div class="bug-done" hidden>
+      <span class="check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></span>
+      <h2>Merci !</h2><p class="muted">Bug <strong data-bug-id></strong> transmis aux administrateurs.</p>
+      <button type="button" class="primary" data-bug-close>Fermer</button>
+    </div>
+  </form>
+</dialog>

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from journal import admin_views as admin, security, views
+from journal import admin_views as admin, bugs, security, views
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -33,6 +33,11 @@ urlpatterns = [
     path("admin/elements/<int:pk>/archiver/", admin.element_toggle, name="admin_element_toggle"),
     path("admin/journal/", admin.audit, name="admin_audit"),
     path("admin/integrite/", admin.integrity, name="admin_integrity"),
+
+    path("bugs/signaler/", bugs.report, name="bug_report"),
+    path("bugs/<int:pk>/capture/", bugs.bug_screenshot, name="bug_screenshot"),
+    path("admin/bugs/", bugs.bug_list, name="bug_list"),
+    path("admin/bugs/<int:pk>/", bugs.bug_detail, name="bug_detail"),
 
     path("sante/", security.health, name="health"),
 ]

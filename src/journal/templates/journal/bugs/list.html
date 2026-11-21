@@ -1,0 +1,19 @@
+{% extends "journal/base.html" %}
+{% block title %}Bugs signalés{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>Bugs signalés</h1><p class="muted">Les signalements des utilisateurs sur LogIT lui-même.</p></div></div>
+<nav class="filters-inline segmented" aria-label="Statut">
+  {% for value, label in statuses %}{% if forloop.first %}<label><input type="radio" name="s" {% if status == 'open' %}checked{% endif %} data-href="?statut=open">À traiter</label>{% endif %}<label><input type="radio" name="s" {% if status == value %}checked{% endif %} data-href="?statut={{ value }}">{{ label }}</label>{% endfor %}
+  <label><input type="radio" name="s" {% if status == 'all' %}checked{% endif %} data-href="?statut=all">Tous</label>
+</nav>
+<section class="card"><table>
+  <thead><tr><th>N°</th><th>Signalement</th><th>Priorité</th><th>Statut</th><th>Par</th><th>Date</th></tr></thead>
+  <tbody>{% for bug in page.object_list %}<tr>
+    <td class="muted">{{ bug.pk }}</td>
+    <td><a class="rowlink" href="{% url 'bug_detail' bug.pk %}">{{ bug.title }}</a><div class="small muted">{{ bug.get_bug_type_display }}{% if bug.page %} · {{ bug.page }}{% endif %}{% if bug.screenshot_name %} · capture jointe{% endif %}</div></td>
+    <td><span class="tag soft {% if bug.priority == 'high' %}rolledback{% elif bug.priority == 'medium' %}watch{% else %}applied{% endif %}">{{ bug.get_priority_display }}</span></td>
+    <td><span class="tag soft {% if bug.status == 'new' %}planned{% elif bug.status == 'in_progress' %}running{% elif bug.status == 'resolved' %}applied{% else %}cancelled{% endif %}">{{ bug.get_status_display }}</span></td>
+    <td class="small">{{ bug.reporter }}</td><td class="when small">{{ bug.recorded_at|date:"d/m/Y H:i" }}</td>
+  </tr>{% empty %}<tr><td colspan="6" class="empty">Aucun signalement.</td></tr>{% endfor %}</tbody>
+</table></section>
+{% endblock %}

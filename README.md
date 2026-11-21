@@ -104,7 +104,11 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/KyoshiroFR/logit/ma
 - **Saisie** : identification (catégorie, déroulement, éléments par domaine), puis 4 blocs courts : ce qui a changé, pourquoi, impacts potentiels, procédure de retour arrière. Les détails techniques sont repliés.
 - **Absence** : chacun indique ses congés dans « Mon compte » (ou un admin le fait). Ses fiches affichent alors « Absent jusqu’au … ».
 
+- **Signaler un bug** : le bouton en haut à droite, présent sur chaque page, ouvre un formulaire (titre, description, type, priorité, navigateur détecté, capture par clic, glisser-déposer ou Ctrl+V). Les administrateurs suivent les signalements dans « Bugs » (nouveau, en cours, résolu) et peuvent préparer une issue GitHub publique, sans la capture ni la page concernée.
+
 ![Détail déployé d’une intervention](docs/images/detail-deploye.png)
+
+![Signaler un bug](docs/images/signaler-un-bug.png)
 
 ### Les rôles
 

@@ -24,6 +24,8 @@
     {% endif %}
   </nav>
   <div class="user">
+    {% if is_admin %}<a href="{% url 'bug_list' %}" class="bugs-link">Bugs{% if open_bugs %} <span class="badge warn" title="Nouveaux signalements">{{ open_bugs }}</span>{% endif %}</a>{% endif %}
+    <a href="{% url 'bug_report' %}?page={{ request.path|urlencode }}" class="report-bug" data-open-bug title="Signaler un bug"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9h8v6a4 4 0 0 1-8 0V9z"/><path d="M9 9V7a3 3 0 0 1 6 0v2M4 13h4M16 13h4M12 11v7"/></svg><span>Signaler un bug</span></a>
     <a href="{% url 'account' %}">{{ user.get_full_name|default:user.username }}</a>
     <form class="inline" method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="link" type="submit">Déconnexion</button></form>
   </div>
@@ -33,5 +35,6 @@
   {% if messages %}<ul class="messages">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
   {% block content %}{% endblock %}
 </main>
+{% if user.is_authenticated and not hide_nav and request.resolver_match.url_name != 'bug_report' %}{% include "journal/includes/bug_dialog.html" %}{% endif %}
 </body>
 </html>

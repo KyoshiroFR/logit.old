@@ -229,3 +229,113 @@ document.addEventListener("DOMContentLoaded", () => {
   initEntries();
   initForm();
 });
+
+// ── Signaler un bug ──────────────────────────────────────────────────────────────────
+async function detectBrowser() {
+  const ua = navigator.userAgent;
+  let browser = /Edg\/(\d+)/.test(ua) ? `Edge ${RegExp.$1}` : /Firefox\/(\d+)/.test(ua) ? `Firefox ${RegExp.$1}`
+    : /Chrome\/(\d+)/.test(ua) ? `Chrome ${RegExp.$1}` : /Version\/(\d+).*Safari/.test(ua) ? `Safari ${RegExp.$1}` : "Navigateur inconnu";
+  if (navigator.brave) browser = browser.replace("Chrome", "Brave");
+  let system = /Windows/.test(ua) ? "Windows" : /Mac OS X/.test(ua) ? "macOS" : /Android/.test(ua) ? "Android" : /Linux/.test(ua) ? "Linux" : "";
+  try {
+    if (system === "Windows" && navigator.userAgentData?.getHighEntropyValues) {
+      const { platformVersion } = await navigator.userAgentData.getHighEntropyValues(["platformVersion"]);
+      system = parseInt(platformVersion, 10) >= 13 ? "Windows 11" : "Windows 10";
+    }
+  } catch (_) { /* détection facultative */ }
+  return [browser, system, `${window.screen.width}×${window.screen.height}`].filter(Boolean).join(", ");
+}
+
+function initBugForm(form) {
+  const zone = form.querySelector(".dropzone");
+  const input = form.querySelector("input[type=file][name=screenshot]");
+  const title = zone.querySelector("[data-dz-title]");
+  const sub = zone.querySelector("[data-dz-sub]");
+  const thumb = zone.querySelector(".dz-thumb");
+  const remove = zone.querySelector(".dz-remove");
+  const accepted = ["image/png", "image/jpeg", "image/webp"];
+  const show = () => {
+    const file = input.files[0];
+    zone.classList.toggle("has-file", Boolean(file));
+    title.textContent = file ? file.name : "Joindre une capture";
+    sub.textContent = file ? "Capture jointe" : "Clique, glisse une image ou colle-la avec Ctrl+V";
+    thumb.hidden = remove.hidden = !file;
+    if (file) thumb.src = URL.createObjectURL(file);
+  };
+  const setFile = (file) => {
+    if (!file || !accepted.includes(file.type)) return;
+    const named = file.name && file.name !== "image.png" ? file
+      : new File([file], `capture-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.png`, { type: file.type });
+    const dt = new DataTransfer(); dt.items.add(named); input.files = dt.files; show();
+  };
+  form.setFile = setFile;
+  input.addEventListener("change", show);
+  remove.addEventListener("click", (e) => { e.preventDefault(); input.value = ""; show(); });
+  ["dragenter", "dragover"].forEach((t) => zone.addEventListener(t, (e) => { e.preventDefault(); zone.classList.add("dragging"); }));
+  ["dragleave", "drop"].forEach((t) => zone.addEventListener(t, () => zone.classList.remove("dragging")));
+  zone.addEventListener("drop", (e) => { e.preventDefault(); setFile(e.dataTransfer.files[0]); });
+  const env = form.querySelector("[data-detect-browser]");
+  if (env && !env.value) detectBrowser().then((v) => { if (!env.value) env.value = v; });
+  return { show };
+}
+
+function initBugReport() {
+  document.querySelectorAll(".bug-form").forEach((form) => { form.bug = initBugForm(form); });
+  const dialog = document.getElementById("bug-dialog");
+  if (!dialog || typeof dialog.showModal !== "function") return;
+  const form = dialog.querySelector("form");
+  const body = dialog.querySelector(".bug-body");
+  const done = dialog.querySelector(".bug-done");
+  const errors = dialog.querySelector(".bug-errors");
+  const submit = dialog.querySelector(".bug-submit");
+
+  const open = () => {
+    body.hidden = false; done.hidden = true; errors.hidden = true;
+    form.querySelector("input[name=page]").value = window.location.pathname + window.location.search;
+    dialog.showModal();
+    form.querySelector("input[name=title]").focus();
+  };
+  document.querySelectorAll("[data-open-bug]").forEach((a) => a.addEventListener("click", (e) => { e.preventDefault(); open(); }));
+  dialog.querySelectorAll("[data-bug-close]").forEach((b) => b.addEventListener("click", () => dialog.close()));
+  dialog.addEventListener("click", (e) => { if (e.target === dialog) dialog.close(); });  // clic sur le fond
+  // Coller une capture quand la fenêtre est ouverte : elle va au signalement, pas à la fiche derrière.
+  document.addEventListener("paste", (e) => {
+    if (!dialog.open) return;
+    const file = Array.from(e.clipboardData?.files || [])[0];
+    if (!file) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    form.setFile(file);
+  }, true);
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    submit.classList.add("loading");
+    errors.hidden = true;
+    fetch(form.action, { method: "POST", body: new FormData(form), credentials: "same-origin", headers: { "X-Requested-With": "fetch" } })
+      .then(async (r) => ({ status: r.status, data: await r.json().catch(() => null) }))
+      .then(({ status, data }) => {
+        submit.classList.remove("loading");
+        if (data?.ok) {
+          dialog.querySelector("[data-bug-id]").textContent = `n° ${data.id}`;
+          body.hidden = true; done.hidden = false;
+          form.reset(); form.bug.show();
+          const env = form.querySelector("[data-detect-browser]");
+          detectBrowser().then((v) => { env.value = v; });
+          return;
+        }
+        if (status === 400 && data?.errors) {
+          errors.textContent = Object.values(data.errors).flat().join(" ");
+          errors.hidden = false;
+          return;
+        }
+        form.submit();  // repli : envoi classique
+      })
+      .catch(() => { submit.classList.remove("loading"); form.submit(); });
+  });
+}
+
+// Liens portés par des boutons radio (filtres de la liste des bugs).
+document.addEventListener("change", (e) => {
+  if (e.target.matches("input[data-href]")) window.location.search = e.target.dataset.href.slice(1);
+});
+document.addEventListener("DOMContentLoaded", initBugReport);
