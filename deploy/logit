@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Exploitation de LogIT : logit status | start | stop | logs | backup | restore <fichier> | verify | ca
+# shellcheck disable=SC1112,SC2012
+set -Eeuo pipefail
+LOGIT_DIR=/opt/logit
+BACKUP_DIR=/var/backups/logit
+RETENTION_DAYS=30
+
+(( EUID == 0 )) || { echo "À lancer en root (sudo logit …)." >&2; exit 1; }
+[[ -f $LOGIT_DIR/.env ]] || { echo "LogIT introuvable dans $LOGIT_DIR." >&2; exit 1; }
+env_value() { sed -n "s/^$1=//p" "$LOGIT_DIR/.env" | tr -d '"'; }
+compose() {
+    local files=() f
+    IFS=: read -ra list <<<"$(env_value COMPOSE_FILE)"
+    for f in "${list[@]}"; do files+=(-f "$f"); done
+    docker compose --project-name logit --project-directory "$LOGIT_DIR/deploy" --env-file "$LOGIT_DIR/.env" "${files[@]}" "$@"
+}
+start() {
+    compose up -d
+    local id
+    for _ in $(seq 1 90); do
+        id=$(compose ps -q app)
+        [[ -n $id && $(docker inspect -f '{{.State.Health.Status}}' "$id" 2>/dev/null) == healthy ]] && { echo "LogIT démarré."; return 0; }
+        sleep 2
+    done
+    echo "LogIT ne démarre pas : logit logs" >&2; return 1
+}
+
+case "${1:-help}" in
+    status)
+        printf 'Version : %s (commit %s) · mode proxy : %s\n\n' "$(env_value LOGIT_VERSION)" "$(env_value LOGIT_COMMIT | cut -c1-12)" "$(env_value LOGIT_MODE)"
+        compose ps
+        printf '\nDernière sauvegarde : %s\n' "$(ls -1t "$BACKUP_DIR"/logit-*.dump 2>/dev/null | head -n1 || echo aucune)"
+        ;;
+    start) start ;;
+    stop) compose stop ;;
+    logs) compose logs --tail "${2:-200}" ;;
+    backup)
+        install -d -m 700 "$BACKUP_DIR"
+        file="$BACKUP_DIR/logit-$(date +%Y%m%d-%H%M%S).dump"
+        compose exec -T db pg_dump -U logit_owner -d logit --format=custom >"$file.part"
+        mv "$file.part" "$file"; chmod 600 "$file"
+        find "$BACKUP_DIR" -name 'logit-*.dump' -mtime +"$RETENTION_DAYS" -delete
+        [[ ${2:-} == --quiet ]] || echo "Sauvegarde : $file ($(du -h "$file" | cut -f1))"
+        ;;
+    restore)
+        file=${2:?Usage : logit restore <fichier.dump>}
+        [[ -f $file ]] || { echo "Fichier introuvable : $file" >&2; exit 1; }
+        echo "La base actuelle sera remplacée par $file."
+        read -r -p "Tape RESTAURER pour confirmer : " answer
+        [[ $answer == RESTAURER ]] || { echo "Abandon."; exit 1; }
+        "$0" backup
+        compose stop app
+        compose exec -T db dropdb -U logit_owner --if-exists --force logit
+        compose exec -T db createdb -U logit_owner logit
+        compose exec -T db pg_restore -U logit_owner -d logit --no-owner --exit-on-error <"$file"
+        start
+        echo "Restauration terminée. Vérification d’intégrité :"
+        compose exec -T app logit-entrypoint verify_chain
+        ;;
+    verify) compose exec -T app logit-entrypoint verify_chain ;;
+    ca)
+        if [[ $(env_value LOGIT_MODE) == caddy ]]; then
+            compose exec -T proxy cat /data/caddy/pki/authorities/local/root.crt
+        else
+            cat /etc/logit/tls/logit.crt
+        fi
+        ;;
+    *)
+        cat <<EOF
+Usage : logit <commande>
+  status            état des services, version, dernière sauvegarde
+  start | stop      démarrer ou arrêter LogIT
+  logs [lignes]     journaux des conteneurs
+  backup            sauvegarde de la base dans $BACKUP_DIR ($RETENTION_DAYS jours conservés)
+  restore <fichier> restaure une sauvegarde (une sauvegarde de l'état actuel est faite avant)
+  verify            vérifie la chaîne d'empreintes des fiches et du journal
+  ca                affiche le certificat à importer sur les postes
+EOF
+        ;;
+esac

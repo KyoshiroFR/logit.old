@@ -1,0 +1,18 @@
+{
+    auto_https disable_redirects
+    # Un navigateur qui joint LogIT par son adresse IP n'envoie pas de nom (SNI) : on lui sert ce certificat.
+    default_sni {$LOGIT_DEFAULT_SNI}
+}
+
+:80 {
+    redir https://{host}{$LOGIT_PORT_SUFFIX}{uri} 308
+}
+
+{$LOGIT_CADDY_SITES} {
+    tls internal
+    encode gzip
+    header -Server
+    reverse_proxy app:8000 {
+        header_up X-Real-IP {remote_host}
+    }
+}

@@ -1,9 +1,0 @@
-{% extends "auth_card.html" %}
-{% block title %}Connexion · LogIT{% endblock %}
-{% block auth_title %}Connexion{% endblock %}
-{% block auth_content %}
-<form method="post" class="form">{% csrf_token %}{{ form.as_div }}
-<input type="hidden" name="next" value="{{ next }}">
-<div class="auth-actions"><button class="primary">Se connecter</button></div>
-</form>
-{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "journal/base.html" %}
+{% block title %}Intégrité{% endblock %}
+{% block content %}
+<h1>Vérification d’intégrité</h1>
+<p class="muted">Recalcule la chaîne d’empreintes des fiches et du journal de sécurité. Toute modification ou suppression faite directement dans la base est détectée.</p>
+<form method="post" class="card">{% csrf_token %}<button type="submit" class="primary">Lancer la vérification</button></form>
+{% if problems is not None %}
+  {% if problems %}<div class="notice danger"><strong>{{ problems|length }} anomalie{{ problems|length|pluralize }}</strong><ul>{% for p in problems %}<li>{{ p }}</li>{% endfor %}</ul></div>
+  {% else %}<p class="notice ok">Aucune anomalie : les chaînes sont intactes.</p>{% endif %}
+{% endif %}
+{% endblock %}

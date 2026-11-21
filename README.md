@@ -1,48 +1,111 @@
 # LogIT
 
-LogIT est un registre auto-hébergé des changements d’infrastructure et de sécurité. Il permet à l’équipe de retrouver qui a fait une intervention, de comparer l’état avant et après, et de consulter les services concernés et le plan de retour arrière.
+Registre des interventions d’infrastructure et de sécurité pour une petite équipe : **qui** a changé **quoi**, **quand**, **pourquoi**, avec quel **impact**, et **comment revenir en arrière**.
 
-[Installer LogIT](#installer-logit) · [Essayer en cinq minutes](#essayer-logit-en-cinq-minutes) · [Donner un retour](#donner-un-retour)
+Conçu pour la traçabilité exigée par NIS2 : l’horodatage est posé par le serveur, rien ne s’efface, et la base de données elle-même refuse toute modification des traces.
 
-![Registre LogIT en thème Clair-obscur avec le comparatif avant et après d’une règle pare-feu fictive](docs/images/logit-registre.png)
+## Installation
 
-![Carte des impacts de la même intervention avec le pare-feu, le portail interne et les services concernés](docs/images/logit-carte-impacts.png)
-
-## Installer LogIT
-
-Depuis **Linux ou Windows via WSL**, avec Bash, `curl` et Docker Compose disponibles, lance cette commande dans le répertoire qui accueillera le dossier `logit`.
+Sur un serveur **Debian 12 ou 13** (amd64 ou arm64), en root :
 
 ```bash
-installateur=$(curl -fsSL https://logit.kyoshiro.ovh/install.sh) && bash -c "$installateur"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/KyoshiroFR/logit/main/install.sh)"
 ```
 
-L’installation démarre avec une base vide. Le terminal affiche le mot de passe temporaire de `admin-logit`, à remplacer lors de la première connexion. Ouvre ensuite [https://localhost:6321](https://localhost:6321).
+Sur une Debian fraîchement installée, sans `curl` ni `sudo`, connecte-toi avec `su -` et utilise `wget` :
 
-- **Certificat local**. Si le navigateur signale que le certificat est inconnu, exporte l’autorité publique de ton conteneur Caddy, puis importe-la dans le magasin de confiance du navigateur de test. Cette commande utilise le nom de l’instance par défaut.
+```bash
+bash -c "$(wget -qO- https://raw.githubusercontent.com/KyoshiroFR/logit/main/install.sh)"
+```
 
-  ```bash
-  docker cp logit-proxy:/data/caddy/pki/authorities/local/root.crt logit-local-ca.crt
-  ```
+### Ce que fait l’installateur
 
-- **Ports déjà utilisés**. Depuis un autre dossier, tu peux lancer une instance distincte sur les ports `16320` et `16321`, puis ouvrir `https://localhost:16321`.
+Il analyse le serveur et s’adapte :
 
-  ```bash
-  installateur=$(curl -fsSL https://logit.kyoshiro.ovh/install.sh) &&
-    LOGIT_INSTALL_INSTANCE=logit-test LOGIT_INSTALL_HTTP_PORT=16320 LOGIT_INSTALL_HTTPS_PORT=16321 bash -c "$installateur"
-  ```
+| Il trouve… | Il fait… |
+|---|---|
+| Docker absent | installe Docker Engine et Compose depuis le dépôt officiel Docker |
+| un paquet non officiel (`docker.io`…) | s’arrête et indique quoi retirer |
+| pas de synchronisation horaire | installe et active `systemd-timesyncd` (les horodatages en dépendent) |
+| aucun service sur 80/443 | déploie son propre Caddy en HTTPS |
+| **nginx** sur 80/443 | ajoute un site `logit.conf`, teste (`nginx -t`) puis recharge, sans toucher aux autres sites |
+| **Apache** sur 80/443 | ajoute un site, active les modules nécessaires, teste puis recharge |
+| **Caddy** (système) | ajoute un fichier importé, sauvegarde le Caddyfile d’origine, valide puis recharge |
+| un autre service sur 80/443 | fait écouter LogIT en local et t’indique la route à ajouter dans ton proxy |
+| un pare-feu ufw actif | t’indique la règle à ajouter (il ne modifie pas tes règles) |
+| LogIT déjà installé | ne modifie rien |
 
-Retrouve [la release v1.0.0](https://github.com/KyoshiroFR/logit/releases/tag/v1.0.0), ou consulte [la documentation](docs/README.md) pour la sauvegarde et la restauration.
+Si un reverse proxy refuse la configuration, l’installateur la retire et le proxy reste dans son état d’origine.
 
-## Essayer LogIT en cinq minutes
+### Secrets et premier accès
 
-1. Dans **Administration**, crée un équipement fictif nommé « Pare-feu de test » et un service « VPN de test ».
-2. Dans **Nouvelle fiche**, consigne une modification fictive. Indique son impact, la vérification effectuée et la procédure de retour arrière. Ajoute les états avant et après et colle une capture anonymisée avec **Ctrl+V**.
-3. Demande à un collègue de retrouver la fiche dans **Historique**, puis d’ouvrir **Carte des impacts** et **Retour arrière**. Sur une instance locale, tu peux rejouer ce parcours avec un second compte dans une fenêtre privée.
-4. Partage le premier endroit où vous avez hésité ou l’information qu’il vous a fallu chercher ailleurs. Utilise le modèle de retour ci-dessous.
+Tous les secrets (clé de l’application, mots de passe PostgreSQL, mot de passe administrateur) sont générés aléatoirement par `openssl rand`. À la fin, l’installateur affiche un bloc **« À enregistrer dans KeePass »**. Le mot de passe administrateur n’est affiché qu’une fois et n’est stocké nulle part en clair. Il doit être changé à la première connexion, puis le TOTP doit être activé.
 
-## Donner un retour
+### Variables facultatives
 
-- [Signaler un bug ou un problème d’installation](https://github.com/KyoshiroFR/logit/issues/new?template=bug_report.md)
-- [Proposer une amélioration ou partager un retour d’expérience](https://github.com/KyoshiroFR/logit/issues/new?template=feedback.md)
+| Variable | Rôle |
+|---|---|
+| `LOGIT_INSTALL_HOSTS` | adresses d’accès (IP, noms), séparées par des espaces |
+| `LOGIT_INSTALL_PROXY` | `auto` (défaut), `caddy`, `nginx`, `apache`, `host-caddy`, `manual` |
+| `LOGIT_INSTALL_DIR` | dossier d’installation (défaut `/opt/logit`) |
+| `LOGIT_INSTALL_REF` | version (tag ou branche) à installer |
+| `LOGIT_INSTALL_YES=1` | aucune question, valeurs détectées |
 
-Les Issues sont publiques. Utilise des exemples fictifs ou des captures anonymisées.
+## Exploitation
+
+```
+logit status            état, version, dernière sauvegarde
+logit start | stop
+logit logs [lignes]
+logit backup            sauvegarde dans /var/backups/logit (automatique chaque nuit, 30 jours conservés)
+logit restore <fichier> restaure une sauvegarde (l’état actuel est sauvegardé avant)
+logit verify            vérifie la chaîne d’empreintes
+logit ca                certificat à importer sur les postes pour éviter l’alerte du navigateur
+```
+
+## Fonctionnement
+
+### Les fiches
+
+- Trois types : **planifiée** (date prévue, puis « marquer réalisée »), **normale**, **urgence**. Une urgence peut être enregistrée avec le minimum (titre, éléments, modification) et reste « à compléter » jusqu’à ce que motif, impact, vérifications et retour arrière soient renseignés.
+- **Deux dates** : la date d’intervention (déclarée) et la date d’enregistrement (posée par le serveur, non modifiable). Une fiche saisie plus de 15 minutes après l’intervention est signalée « saisie a posteriori ».
+- **Une correction n’écrase rien** : elle ajoute une version, avec son auteur, sa date et un motif obligatoire. L’historique montre les différences ligne par ligne. Une correction de l’impact ou du retour arrière est signalée en tête de fiche.
+- Une fiche ne se supprime pas : elle s’annule, avec un motif, et reste consultable.
+
+### Les rôles
+
+| Rôle | Droits |
+|---|---|
+| Administrateur | tout, plus les comptes, le référentiel, le journal de sécurité et le contrôle d’intégrité |
+| Contributeur | crée, corrige, marque réalisée et annule des fiches |
+| Lecteur | consulte tout, ne modifie rien |
+
+### Sécurité et traçabilité
+
+- Comptes nominatifs, mot de passe initial imposé (12 caractères minimum), **TOTP** imposable par compte avec 10 codes de secours à usage unique, verrouillage 15 minutes après 5 échecs, session limitée à 8 heures.
+- **Journal de sécurité** : connexions réussies et échouées, verrouillages, création et modification de comptes, réinitialisations, référentiel.
+- **Traces immuables au niveau de PostgreSQL** :
+  - l’application se connecte avec un compte qui n’a que les droits de lecture et d’ajout sur les fiches, leurs versions et le journal ;
+  - des déclencheurs refusent `UPDATE`, `DELETE` et `TRUNCATE` même au propriétaire de la base ;
+  - les migrations tournent dans un conteneur séparé, seul à connaître le mot de passe propriétaire.
+- **Chaîne d’empreintes** : chaque version et chaque événement contient l’empreinte SHA-256 du précédent. Une altération faite directement en base, même par un superutilisateur, est détectée par `logit verify` ou par la page Intégrité.
+- HTTPS obligatoire, cookies `Secure`, `HttpOnly` et `SameSite=Strict`, CSP stricte sans script ni style en ligne, conteneur applicatif en lecture seule, sans privilège et sans root.
+
+## Développement
+
+Python 3.12, Django 5.2, PostgreSQL 17, interface rendue côté serveur sans framework JavaScript.
+
+```bash
+pip install -r requirements.txt
+cd src
+LOGIT_SECRET_KEY=dev LOGIT_TESTING=1 LOGIT_DB_HOST=127.0.0.1 \
+LOGIT_DB_AS_OWNER=1 LOGIT_DB_OWNER_USER=… LOGIT_DB_OWNER_PASSWORD=… \
+LOGIT_DB_APP_USER=logit_app LOGIT_DB_APP_PASSWORD=… python manage.py test journal
+```
+
+Les tests demandent un PostgreSQL réel, car ils vérifient les protections de la base.
+
+## Publier une version
+
+1. Créer le tag (`git tag v2.0.0 && git push origin v2.0.0`).
+2. Sur `main`, renseigner dans `install.sh` `LOGIT_DEFAULT_REF` (le tag) et `LOGIT_DEFAULT_COMMIT` (`git rev-parse v2.0.0`). L’installateur refusera tout code dont le commit ne correspond pas.

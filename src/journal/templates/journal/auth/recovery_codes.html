@@ -1,0 +1,10 @@
+{% extends "journal/base.html" %}
+{% block title %}Codes de secours{% endblock %}
+{% block content %}
+<div class="medium card">
+  <h1>Codes de secours</h1>
+  <p class="notice warn">Enregistre ces codes maintenant, par exemple dans KeePass. Ils ne seront plus jamais affichés. Chaque code ne sert qu’une fois, si tu perds ton téléphone.</p>
+  <div class="codes secret">{% for c in codes %}<span>{{ c }}</span>{% endfor %}</div>
+  <p><a class="button primary" href="{% url 'home' %}">J’ai enregistré mes codes</a></p>
+</div>
+{% endblock %}

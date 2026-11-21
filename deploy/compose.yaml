@@ -1,0 +1,64 @@
+# Socle LogIT : base PostgreSQL, migrations (usage unique) et application.
+# L'exposition dépend du mode choisi à l'installation (COMPOSE_FILE dans .env) :
+#   compose.caddy.yaml  Caddy intégré sur 80/443
+#   compose.port.yaml   application sur 127.0.0.1, derrière le reverse proxy du serveur
+x-app-env: &app-env
+  LOGIT_SECRET_KEY: ${LOGIT_SECRET_KEY:?}
+  LOGIT_HOSTS: ${LOGIT_HOSTS:?}
+  LOGIT_PUBLIC_PORT: ${LOGIT_PUBLIC_PORT:-443}
+  LOGIT_TIME_ZONE: ${LOGIT_TIME_ZONE:-Europe/Paris}
+  LOGIT_DB_HOST: db
+  LOGIT_DB_NAME: logit
+  LOGIT_DB_APP_USER: logit_app
+  LOGIT_DB_APP_PASSWORD: ${LOGIT_DB_APP_PASSWORD:?}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: logit
+      POSTGRES_USER: logit_owner
+      POSTGRES_PASSWORD: ${LOGIT_DB_OWNER_PASSWORD:?}
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    volumes:
+      - db:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logit_owner -d logit"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    security_opt: [no-new-privileges:true]
+
+  migrate:
+    image: logit:${LOGIT_VERSION:-local}
+    build: ..
+    command: migrate
+    restart: "no"
+    environment:
+      <<: *app-env
+      LOGIT_DB_OWNER_USER: logit_owner
+      LOGIT_DB_OWNER_PASSWORD: ${LOGIT_DB_OWNER_PASSWORD:?}
+    depends_on:
+      db: {condition: service_healthy}
+    networks: [internal]
+    security_opt: [no-new-privileges:true]
+
+  app:
+    image: logit:${LOGIT_VERSION:-local}
+    restart: unless-stopped
+    environment: *app-env
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    networks: [internal]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+networks:
+  internal:
+
+volumes:
+  db:

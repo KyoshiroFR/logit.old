@@ -1,0 +1,49 @@
+{% extends "journal/base.html" %}
+{% block title %}Registre{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Registre des interventions</h1><p class="muted">Ce qui a changé, qui est intervenu, quand, pourquoi, et comment revenir en arrière.</p></div>
+  {% if can_write %}<a class="button primary" href="{% url 'create' %}">+ Nouvelle fiche</a>{% endif %}
+</div>
+
+<form class="card filters" method="get" role="search">
+  {% include "journal/includes/field.html" with field=form.q %}
+  {% include "journal/includes/field.html" with field=form.element %}
+  {% include "journal/includes/field.html" with field=form.kind %}
+  {% include "journal/includes/field.html" with field=form.period %}
+  <div class="actions"><button type="submit" class="primary">Filtrer</button>{% if filters_active %}<a class="button" href="{% url 'home' %}">Effacer</a>{% endif %}</div>
+</form>
+
+{% if not filters_active and to_complete or not filters_active and upcoming %}
+<div class="grid-2">
+  {% if to_complete %}<section class="card"><h2>À compléter <span class="tag warn">{{ to_complete|length }}</span></h2>
+    <ul class="compact-list">{% for v in to_complete %}<li><a href="{% url 'detail' v.intervention_id %}">n° {{ v.intervention_id }} · {{ v.title }}</a><span class="muted small when">{{ v.occurred_at|date:"d/m H:i" }} · {{ v.author }}</span></li>{% endfor %}</ul>
+  </section>{% endif %}
+  {% if upcoming %}<section class="card"><h2>À venir <span class="tag planned">{{ upcoming|length }}</span></h2>
+    <ul class="compact-list">{% for v in upcoming %}<li><a href="{% url 'detail' v.intervention_id %}">n° {{ v.intervention_id }} · {{ v.title }}</a><span class="muted small when">prévue le {{ v.occurred_at|date:"d/m H:i" }}</span></li>{% endfor %}</ul>
+  </section>{% endif %}
+</div>
+{% endif %}
+
+<section class="card">
+  <h2>{% if filters_active %}{{ page.paginator.count }} résultat{{ page.paginator.count|pluralize }}{% else %}Dernières interventions{% endif %}</h2>
+  {% if page.object_list %}
+  <table>
+    <thead><tr><th>N°</th><th>Date</th><th>Intervention</th><th>Éléments</th><th>Auteur</th></tr></thead>
+    <tbody>{% for v in page.object_list %}
+      <tr>
+        <td class="muted">{{ v.intervention_id }}</td>
+        <td class="when">{{ v.occurred_at|date:"d/m/Y H:i" }}</td>
+        <td><a class="rowlink" href="{% url 'detail' v.intervention_id %}">{{ v.title }}</a><div>{% include "journal/includes/tags.html" %}</div></td>
+        <td class="small">{% for e in v.elements.all %}{{ e.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+        <td class="small">{{ v.intervention.created_by }}</td>
+      </tr>{% endfor %}</tbody>
+  </table>
+  {% if page.has_other_pages %}<nav class="pager">
+    {% if page.has_previous %}<a class="button" href="?{{ query }}&page={{ page.previous_page_number }}">← Précédent</a>{% endif %}
+    <span class="muted small">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="button" href="?{{ query }}&page={{ page.next_page_number }}">Suivant →</a>{% endif %}
+  </nav>{% endif %}
+  {% else %}<p class="empty">{% if filters_active %}Aucune intervention ne correspond.{% else %}Aucune intervention pour l’instant.{% endif %}</p>{% endif %}
+</section>
+{% endblock %}
