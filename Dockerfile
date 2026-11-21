@@ -7,8 +7,11 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY src/ .
 COPY deploy/entrypoint.sh /usr/local/bin/logit-entrypoint
+# Le code appartient à root et reste en lecture seule pour le compte logit, quels que soient les droits sur l'hôte.
 RUN chmod 0755 /usr/local/bin/logit-entrypoint \
-    && LOGIT_SECRET_KEY=build-only python manage.py collectstatic --noinput -v0
+    && chmod -R u=rwX,go=rX /app \
+    && LOGIT_SECRET_KEY=build-only python manage.py collectstatic --noinput -v0 \
+    && chmod -R go=rX /app/staticfiles
 USER logit
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \

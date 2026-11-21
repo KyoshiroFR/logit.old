@@ -105,14 +105,36 @@ MEM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
 (( MEM_MB >= 900 )) || warn "Mémoire faible (${MEM_MB} Mo). 1 Go minimum est conseillé."
 
 # --- 2. Installation existante ------------------------------------------------------------
+remove_incomplete() {
+    # Une installation sans le marqueur .installed n'a jamais créé de compte : elle ne contient aucune donnée.
+    command -v docker >/dev/null && compose down --volumes --remove-orphans >>"$LOG" 2>&1 || true
+    local f
+    for f in /etc/nginx/sites-enabled/logit.conf /etc/nginx/sites-available/logit.conf /etc/nginx/conf.d/logit.conf \
+             /etc/apache2/sites-enabled/logit.conf /etc/apache2/sites-available/logit.conf /etc/caddy/logit.caddy; do
+        [[ -e $f ]] && grep -q "ajouté par l'installateur" "$f" 2>/dev/null && rm -f "$f"
+    done
+    [[ -L /etc/nginx/sites-enabled/logit.conf ]] && rm -f /etc/nginx/sites-enabled/logit.conf
+    if [[ -f /etc/caddy/Caddyfile ]]; then sed -i '\|^import /etc/caddy/logit.caddy$|d' /etc/caddy/Caddyfile; fi
+    command -v nginx >/dev/null && nginx -t >>"$LOG" 2>&1 && systemctl reload nginx >>"$LOG" 2>&1 || true
+    command -v apache2ctl >/dev/null && apache2ctl configtest >>"$LOG" 2>&1 && systemctl reload apache2 >>"$LOG" 2>&1 || true
+    rm -rf "$DIR" /etc/logit
+}
+
 if [[ -f $DIR/.env ]]; then
     step "Installation existante détectée dans $DIR"
-    if command -v docker >/dev/null && [[ -n $(compose ps --status running -q app 2>/dev/null) ]]; then
+    if [[ ! -f $DIR/.installed ]]; then
+        warn "Installation précédente interrompue avant la création du compte administrateur : elle est vide."
+        ask "La supprimer et tout réinstaller ? (oui/non)" "oui"
+        [[ $REPLY == oui ]] || fail "installation interrompue conservée dans $DIR. Rien n’a été modifié."
+        remove_incomplete
+        ok "Installation interrompue supprimée"
+    elif command -v docker >/dev/null && [[ -n $(compose ps --status running -q app 2>/dev/null) ]]; then
         ok "LogIT fonctionne déjà. Aucune modification effectuée."
         info "État : logit status   ·   Sauvegarde : logit backup"
         exit 0
+    else
+        fail "LogIT est installé dans $DIR mais n’est pas démarré. Lance « logit start », ou consulte « logit logs »."
     fi
-    fail "LogIT est déjà installé dans $DIR mais n’est pas démarré. Lance « logit start », ou consulte « logit logs »."
 fi
 [[ ! -e $DIR ]] || fail "$DIR existe déjà sans installation LogIT. Choisis un autre dossier avec LOGIT_INSTALL_DIR."
 
@@ -247,7 +269,9 @@ fi
 
 # --- 6. Code source -----------------------------------------------------------------------
 step "Récupération de LogIT ($REF)"
-git clone --quiet --depth 1 --branch "$REF" "$LOGIT_REPO" "$DIR" >>"$LOG" 2>&1 || fail "impossible de récupérer $REF depuis $LOGIT_REPO."
+# Le code doit rester lisible par le compte non privilégié du conteneur : umask standard ici,
+# seuls les secrets (.env, clé TLS, sauvegardes) sont restreints à root.
+(umask 022 && git clone --quiet --depth 1 --branch "$REF" "$LOGIT_REPO" "$DIR") >>"$LOG" 2>&1 || fail "impossible de récupérer $REF depuis $LOGIT_REPO."
 COMMIT=$(git -C "$DIR" rev-parse HEAD)
 if [[ $REF == "$LOGIT_DEFAULT_REF" && -n $LOGIT_DEFAULT_COMMIT ]]; then
     [[ $COMMIT == "$LOGIT_DEFAULT_COMMIT" ]] || { rm -rf "$DIR"; fail "le commit de $REF ($COMMIT) ne correspond pas à l’empreinte attendue. Installation arrêtée."; }
@@ -255,7 +279,7 @@ if [[ $REF == "$LOGIT_DEFAULT_REF" && -n $LOGIT_DEFAULT_COMMIT ]]; then
 else
     warn "Version $REF installée sans empreinte de référence (commit $COMMIT)."
 fi
-chmod 750 "$DIR"
+chmod 755 "$DIR"
 
 # --- 7. Secrets ---------------------------------------------------------------------------
 step "Génération des secrets"
@@ -289,8 +313,12 @@ ok "Secrets aléatoires écrits dans $DIR/.env (root uniquement)"
 # --- 8. Construction et démarrage ---------------------------------------------------------
 step "Construction et démarrage (quelques minutes la première fois)"
 compose build >>"$LOG" 2>&1 || fail "la construction de l’image a échoué."
-compose up -d >>"$LOG" 2>&1 || fail "le démarrage a échoué. Diagnostic : logit logs"
-wait_healthy 120 || fail "l’application ne démarre pas. Diagnostic : logit logs"
+show_logs() {  # affiche la cause d'un échec de démarrage, sans secret (les journaux n'en contiennent pas)
+    printf '\n%sDerniers messages des services :%s\n' "$D" "$N" >&2
+    compose logs --no-color --tail 20 migrate app 2>&1 | sed 's/^/    /' >&2 || true
+}
+compose up -d >>"$LOG" 2>&1 || { show_logs; fail "le démarrage a échoué. Après correction, relance l’installateur."; }
+wait_healthy 120 || { show_logs; fail "l’application ne démarre pas."; }
 ok "Base, migrations et application démarrées"
 
 # --- 9. Branchement sur le reverse proxy du serveur ----------------------------------------
@@ -457,6 +485,8 @@ EOF
 chmod 644 /etc/cron.d/logit
 if logit backup --quiet; then ok "Commande « logit » installée, première sauvegarde faite, sauvegarde chaque nuit à 2 h 17"
 else warn "Première sauvegarde impossible : vérifie « logit backup »."; fi
+
+date -Iseconds >"$DIR/.installed"
 
 # --- 11. Récapitulatif --------------------------------------------------------------------
 trap - ERR
