@@ -9,7 +9,7 @@
   <button type="submit" class="primary">Ajouter</button></form>
 <section class="card"><h2>Référentiel</h2>
   <ul class="compact-list">{% for e in elements %}<li>
-    <span><strong>{{ e.name }}</strong> <span class="muted small">{{ e.get_kind_display }}</span>{% if e.archived %} <span class="tag">archivé</span>{% endif %}{% if e.description %}<br><span class="small muted">{{ e.description }}</span>{% endif %}</span>
+    <span><strong>{{ e.name }}</strong> <span class="muted small">{{ e.get_group_display }} · {{ e.get_kind_display }}</span>{% if e.archived %} <span class="tag">archivé</span>{% endif %}{% if e.description %}<br><span class="small muted">{{ e.description }}</span>{% endif %}</span>
     <form method="post" action="{% url 'admin_element_toggle' e.pk %}">{% csrf_token %}<button type="submit" class="small">{% if e.archived %}Réactiver{% else %}Archiver{% endif %}</button></form>
   </li>{% empty %}<li class="empty">Aucun élément.</li>{% endfor %}</ul></section>
 </div>

@@ -8,9 +8,9 @@
   <tbody>{% for r in rows %}<tr>
     <td><a class="rowlink" href="{% url 'admin_user_edit' r.user.pk %}">{{ r.user.username }}</a>{% if not r.user.is_active %} <span class="tag">désactivé</span>{% endif %}</td>
     <td>{{ r.user.get_full_name }}</td><td>{{ r.role }}</td>
-    <td><span class="tags">{% if r.profile.totp_confirmed %}<span class="tag done">TOTP</span>{% elif r.profile.totp_required %}<span class="tag warn">TOTP à activer</span>{% else %}<span class="tag">sans TOTP</span>{% endif %}
-      {% if r.profile.must_change_password %}<span class="tag warn">mot de passe temporaire</span>{% endif %}
-      {% if r.profile.locked_until and r.profile.locked_until > now %}<span class="tag urgent">verrouillé</span>{% endif %}</span></td>
+    <td><span class="tags">{% if r.profile.totp_confirmed %}<span class="tag applied soft">TOTP</span>{% elif r.profile.totp_required %}<span class="tag watch soft">TOTP à activer</span>{% else %}<span class="tag soft">sans TOTP</span>{% endif %}
+      {% if r.profile.must_change_password %}<span class="tag watch soft">mot de passe temporaire</span>{% endif %}
+      {% if r.profile.locked_until and r.profile.locked_until > now %}<span class="tag rolledback soft">verrouillé</span>{% endif %}</span></td>
     <td class="when small">{{ r.user.last_login|date:"d/m/Y H:i"|default:"jamais" }}</td>
   </tr>{% endfor %}</tbody>
 </table></section>

@@ -2,52 +2,66 @@
 {% block title %}{% if rollback_source %}Retour arrière{% elif mode == 'create' %}Nouvelle fiche{% else %}Corriger la fiche n° {{ current.intervention_id }}{% endif %}{% endblock %}
 {% block content %}
 <div class="page-head"><div>
-  {% if rollback_source %}<p class="muted small"><a href="{% url 'detail' rollback_source.intervention_id %}">Fiche n° {{ rollback_source.intervention_id }}</a> / Retour arrière</p>
-  <h1>Consigner un retour arrière</h1><p class="muted">Cette nouvelle fiche sera liée à la fiche n° {{ rollback_source.intervention_id }}. Elle est préremplie avec sa procédure de retour arrière et ses états avant/après inversés : vérifie et complète.</p>
-  {% elif mode == 'create' %}<h1>Nouvelle fiche</h1><p class="muted">La date d’enregistrement est posée automatiquement par le serveur.</p>
-  {% else %}<p class="muted small"><a href="{% url 'detail' current.intervention_id %}">Fiche n° {{ current.intervention_id }}</a> / Correction</p><h1>Corriger : {{ current.title }}</h1>
-  <p class="muted">La version actuelle reste conservée. Ta correction crée la version {{ current.number|add:1 }}, visible dans l’historique.</p>{% endif %}
+  {% if rollback_source %}<p class="crumbs"><a href="{% url 'detail' rollback_source.intervention_id %}">Fiche n° {{ rollback_source.intervention_id }}</a> / Retour arrière</p>
+  <h1>Consigner un retour arrière</h1><p class="muted">Fiche liée à la n° {{ rollback_source.intervention_id }}, préremplie avec sa procédure de retour arrière et ses états avant/après inversés. Vérifie et complète.</p>
+  {% elif mode == 'create' %}<h1>Nouvelle fiche</h1><p class="muted">Deux minutes maintenant, c’est une heure gagnée pour celui qui enquêtera lundi.</p>
+  {% else %}<p class="crumbs"><a href="{% url 'detail' current.intervention_id %}">Fiche n° {{ current.intervention_id }}</a> / Correction</p><h1>Corriger : {{ current.title }}</h1>
+  <p class="muted">La version actuelle reste conservée : ta correction crée la version {{ current.number|add:1 }}, visible dans l’historique.</p>{% endif %}
 </div></div>
+
 <form method="post" class="medium" enctype="multipart/form-data" novalidate>{% csrf_token %}
-  {{ form.non_field_errors }}
-  {% if form.note %}<section class="card">{% include "journal/includes/field.html" with field=form.note %}</section>{% endif %}
-  <section class="card">
-    <div class="field radio-row">{{ form.kind.label_tag }}{{ form.kind }}{{ form.kind.errors }}</div>
-    <p id="urgent-hint" class="notice warn small" hidden>Urgence : seuls le titre, les éléments et la modification sont obligatoires. La fiche restera « à compléter » jusqu’à ce que le reste soit renseigné.</p>
-    <div class="form-grid">
-      {% include "journal/includes/field.html" with field=form.title %}
-      {% include "journal/includes/field.html" with field=form.occurred_at %}
+  {% if form.non_field_errors %}<div class="notice danger">{{ form.non_field_errors }}</div>{% endif %}
+  {% if form.note %}<section class="form-section">{% include "journal/includes/field.html" with field=form.note %}</section>{% endif %}
+
+  <section class="form-section">
+    <h2><span class="num">1</span> Identification</h2>
+    <div class="auto-facts"><span>Auteur : <b>{{ user.get_full_name|default:user.username }}</b></span><span>Enregistrement : <b>horodaté par le serveur</b></span></div>
+    {% include "journal/includes/field.html" with field=form.title %}
+    <div class="field-row">
+      <div class="field"><span class="label">{{ form.category.label }}</span><div class="segmented">{% for radio in form.category %}<label>{{ radio.tag }}{{ radio.choice_label }}</label>{% endfor %}</div>{{ form.category.errors }}</div>
+      <div class="field"><span class="label">{{ form.kind.label }}</span><div class="segmented">{% for radio in form.kind %}<label>{{ radio.tag }}{{ radio.choice_label }}</label>{% endfor %}</div>{{ form.kind.errors }}</div>
     </div>
+    <p id="urgent-hint" class="notice warn small" hidden>Urgence : seuls le titre, les éléments et « Ce qui a changé » sont obligatoires. La fiche restera « à compléter » jusqu’au reste.</p>
+    <div class="form-grid">{% include "journal/includes/field.html" with field=form.occurred_at %}</div>
     <div class="field{% if form.elements.errors %} has-error{% endif %}">
-      <label>{{ form.elements.label }} <span class="muted">*</span></label>
-      <input type="search" class="checks-filter" placeholder="Filtrer les éléments…" data-filter-for="elements-list" aria-label="Filtrer les éléments">
-      <div class="checks" id="elements-list">{{ form.elements }}</div>
-      {% if not form.elements.field.queryset.exists %}<div class="help">Aucun élément. {% if is_admin %}<a href="{% url 'admin_elements' %}">Ajoute des équipements et services</a>.{% else %}Demande à un administrateur d’en ajouter.{% endif %}</div>{% endif %}
+      <span class="label">{{ form.elements.label }} <span class="faint">*</span></span>
+      <input type="search" class="checks-filter" placeholder="Filtrer : DC01, pare-feu, SQL…" data-filter-for="elements-list" aria-label="Filtrer les éléments">
+      <div id="elements-list" class="stack-sm">
+        {% for group, items in element_groups %}<div class="chip-group"><div class="label">{{ group }}</div><div class="chips">
+          {% for element, checked in items %}<label class="chip"><input type="checkbox" name="elements" value="{{ element.pk }}"{% if checked %} checked{% endif %}>{{ element.name }}</label>{% endfor %}
+        </div></div>{% empty %}<p class="help">Aucun élément. {% if is_admin %}<a href="{% url 'admin_elements' %}">Ajoute des équipements et services</a>.{% else %}Demande à un administrateur d’en ajouter.{% endif %}</p>{% endfor %}
+      </div>
       {{ form.elements.errors }}
     </div>
   </section>
-  <section class="card">
-    {% include "journal/includes/field.html" with field=form.change %}
-    {% include "journal/includes/field.html" with field=form.reason %}
-    {% include "journal/includes/field.html" with field=form.impact %}
-    {% include "journal/includes/field.html" with field=form.verification %}
-    {% include "journal/includes/field.html" with field=form.rollback %}
-  </section>
-  <section class="card">
-    <h2>Avant / après <span class="muted small">(facultatif)</span></h2>
-    <p class="muted small">Colle les extraits de configuration. Ne colle jamais de mot de passe, de clé ou de secret.</p>
-    <div class="form-grid">
-      {% include "journal/includes/field.html" with field=form.before_state %}
-      {% include "journal/includes/field.html" with field=form.after_state %}
+
+  <section class="form-section">
+    <h2><span class="num">2</span> L’essentiel en 4 blocs</h2>
+    <div class="four">
+      {% include "journal/includes/field.html" with field=form.change %}
+      {% include "journal/includes/field.html" with field=form.reason %}
+      {% include "journal/includes/field.html" with field=form.impact %}
+      <div class="rollback-field">{% include "journal/includes/field.html" with field=form.rollback %}</div>
     </div>
   </section>
-  <section class="card">
-    <h2>Captures <span class="muted small">(facultatif)</span></h2>
-    <p class="muted small">Colle une capture avec <kbd>Ctrl</kbd>+<kbd>V</kbd> n’importe où sur la page, ou choisis des fichiers. PNG, JPEG ou WebP, 5 Mo par image, 10 par fiche.{% if mode == 'correct' %} Les captures existantes sont conservées.{% endif %}</p>
-    <input type="file" name="attachments" id="attachments" accept="image/png,image/jpeg,image/webp" multiple>
-    <div class="previews" id="attachment-previews" aria-live="polite"></div>
-  </section>
-  <div class="actions"><button type="submit" class="primary">{% if mode == 'create' %}Enregistrer la fiche{% else %}Enregistrer la correction{% endif %}</button>
-    <a class="button" href="{% if mode == 'create' %}{% url 'home' %}{% else %}{% url 'detail' current.intervention_id %}{% endif %}">Annuler</a></div>
+
+  <details class="more"{% if form.verification.value or form.before_state.value or form.after_state.value or form.verification.errors %} open{% endif %}>
+    <summary><span>Détails techniques : vérifications, avant / après, captures<span class="muted small">facultatif</span></span></summary>
+    <div class="content">
+      {% include "journal/includes/field.html" with field=form.verification %}
+      <div class="form-grid">
+        {% include "journal/includes/field.html" with field=form.before_state %}
+        {% include "journal/includes/field.html" with field=form.after_state %}
+      </div>
+      <p class="muted small">Ne colle jamais de mot de passe, de clé ou de secret.</p>
+      <span class="label">Captures</span>
+      <p class="muted small">Colle une capture avec <kbd>Ctrl</kbd>+<kbd>V</kbd> n’importe où sur la page, ou choisis des fichiers. PNG, JPEG ou WebP, 5 Mo par image, 10 par fiche.{% if mode == 'correct' %} Les captures existantes sont conservées.{% endif %}</p>
+      <input type="file" name="attachments" id="attachments" accept="image/png,image/jpeg,image/webp" multiple>
+      <div class="previews" id="attachment-previews" aria-live="polite"></div>
+    </div>
+  </details>
+
+  <div class="sticky-actions actions"><button type="submit" class="primary">{% if mode == 'create' %}Enregistrer la fiche{% else %}Enregistrer la correction{% endif %}</button>
+    <a class="button" href="{% if rollback_source %}{% url 'detail' rollback_source.intervention_id %}{% elif mode == 'create' %}{% url 'home' %}{% else %}{% url 'detail' current.intervention_id %}{% endif %}">Annuler</a></div>
 </form>
 {% endblock %}

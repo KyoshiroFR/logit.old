@@ -17,7 +17,8 @@ from django.views.decorators.http import require_http_methods
 from . import activity
 from .attachments import build_attachments
 from .chain import ConcurrentEdit, append_version
-from .forms import CancelForm, CompleteForm, CorrectionForm, FilterForm, InterventionForm
+from .presenters import card
+from .forms import CancelForm, CompleteForm, CorrectionForm, FilterForm, InterventionForm, element_groups
 from .models import Attachment, Intervention, Version
 from .permissions import writer_required
 
@@ -42,10 +43,13 @@ def incomplete_q():
     return missing & ~Q(status=Version.STATUS_CANCELLED)
 
 
+FILTER_KEYS = ("q", "element", "category", "kind", "period")
+
+
 @login_required
 def home(request):
     versions = current_versions()
-    form = FilterForm(request.GET or None)
+    form = FilterForm(request.GET)
     filtered = versions
     active = False
     if form.is_valid():
@@ -58,21 +62,43 @@ def home(request):
                 | Q(elements__name__icontains=q)).distinct()
         if data["element"]:
             filtered = filtered.filter(elements=data["element"])
+        if data["category"]:
+            filtered = filtered.filter(category=data["category"])
         if data["kind"]:
             filtered = filtered.filter(kind=data["kind"])
         if data["period"]:
             filtered = filtered.filter(occurred_at__gte=timezone.now() - PERIODS[data["period"]])
-        active = any(data.values())
-    page = Paginator(filtered.order_by("-occurred_at", "-pk"), 25).get_page(request.GET.get("page"))
+        active = any(data[k] for k in FILTER_KEYS)
+    page = Paginator(filtered.select_related("intervention__created_by__profile").order_by("-occurred_at", "-pk"),
+                     25).get_page(request.GET.get("page"))
+    rolled_back = set(Intervention.objects.filter(rollbacks__isnull=False).values_list("pk", flat=True))
+    cards = [card(v, v.intervention_id in rolled_back) for v in page.object_list]
     query = request.GET.copy()
-    query.pop("page", None)
+    for key in ("page", "fragment"):
+        query.pop(key, None)
+    context = {"form": form, "page": page, "cards": cards, "filters_active": active, "query": query.urlencode()}
+    if request.GET.get("fragment"):
+        return render(request, "journal/includes/results.html", context)
     unseen = [] if active else activity.unseen_items(request.user)
-    return render(request, "journal/home.html", {
-        "form": form, "page": page, "filters_active": active, "query": query.urlencode(),
+    context.update({
         "unseen": unseen, "unseen_upto": max((i["version"].pk for i in unseen), default=0),
-        "rolled_back": set(Intervention.objects.filter(rollbacks__isnull=False).values_list("pk", flat=True)),
-        "to_complete": [] if active else versions.filter(incomplete_q()).order_by("occurred_at"),
-        "upcoming": [] if active else versions.filter(status=Version.STATUS_PLANNED).order_by("occurred_at"),
+        "to_complete": versions.filter(incomplete_q()).order_by("occurred_at"),
+        "upcoming": versions.filter(status=Version.STATUS_PLANNED).order_by("occurred_at"),
+    })
+    return render(request, "journal/home.html", context)
+
+
+@login_required
+def preview(request, pk):
+    """Détail déployé dans le registre, chargé à la demande."""
+    intervention = get_object_or_404(Intervention.objects.select_related("created_by__profile"), pk=pk)
+    current = intervention.current
+    return render(request, "journal/includes/preview.html", {
+        "intervention": intervention, "current": current,
+        "card": card(current, intervention.rollbacks.exists()),
+        "state_diff": line_diff(current.before_state, current.after_state)
+        if current.before_state or current.after_state else None,
+        "attachments": intervention.attachments.defer("data"),
     })
 
 
@@ -89,11 +115,11 @@ def line_diff(before, after):
 def version_changes(previous, version):
     changes = []
     labels = {f.name: f.verbose_name for f in Version._meta.fields}
-    for name in ["kind", "status", "occurred_at"]:
+    for name in ["kind", "category", "status", "occurred_at"]:
         old, new = getattr(previous, name), getattr(version, name)
         if old != new:
             display = (lambda v: timezone.localtime(v).strftime("%d/%m/%Y %H:%M")) if name == "occurred_at" else \
-                (lambda v, n=name: dict(Version._meta.get_field(n).choices)[v])
+                (lambda v, n=name: dict(Version._meta.get_field(n).choices).get(v, "—"))
             changes.append({"label": labels[name], "simple": True, "old": display(old), "new": display(new)})
     old_el = {e.name for e in previous.elements.all()}
     new_el = {e.name for e in version.elements.all()}
@@ -130,25 +156,26 @@ def detail(request, pk):
         "attachments": intervention.attachments.defer("data").select_related("uploader", "version"),
         "rollbacks": [(r, r.current) for r in intervention.rollbacks.select_related("created_by")],
         "can_rollback": current.status == Version.STATUS_DONE,
+        "card": card(current, intervention.rollbacks.exists()),
     })
 
 
 def _version_from(current, author, action, **changes):
-    fields = {f: getattr(current, f) for f in Version.CONTENT_FIELDS}
+    fields = {f: getattr(current, f) for f in Version.CONTENT_FIELDS + ["category"]}
     fields.update(changes)
     return Version(intervention=current.intervention, number=current.number + 1, action=action,
                    author=author, **fields)
 
 
 def _form_initial(version):
-    data = {f: getattr(version, f) for f in Version.CONTENT_FIELDS if f != "status"}
+    data = {f: getattr(version, f) for f in Version.CONTENT_FIELDS + ["category"] if f != "status"}
     data["occurred_at"] = timezone.localtime(version.occurred_at)
     data["elements"] = list(version.elements.all())
     return data
 
 
 def _content(data):
-    return {f: data[f] for f in Version.CONTENT_FIELDS if f not in ("status",)}
+    return {f: data[f] for f in Version.CONTENT_FIELDS + ["category"] if f != "status"}
 
 
 def _uploads(request, form, already=0):
@@ -174,7 +201,8 @@ def _create_intervention(request, form, rollback_of=None, template="journal/form
                 append_version(version, [e.pk for e in data["elements"]], uploads)
             messages.success(request, f"Fiche n° {intervention.pk} enregistrée.")
             return redirect("detail", pk=intervention.pk)
-    return render(request, template, {"form": form, "mode": "create", **(context or {})})
+    return render(request, template, {"form": form, "mode": "create", "element_groups": element_groups(form),
+                                      **(context or {})})
 
 
 @login_required
@@ -227,7 +255,7 @@ def correct(request, pk):
             status = Version.STATUS_DONE
         new_ids = sorted(e.pk for e in data["elements"])
         uploads = _uploads(request, form, intervention.attachments.count())
-        unchanged = all(data[f] == getattr(current, f) for f in Version.CONTENT_FIELDS if f != "status") \
+        unchanged = all(data[f] == getattr(current, f) for f in Version.CONTENT_FIELDS + ["category"] if f != "status") \
             and new_ids == sorted(e.pk for e in elements) and status == current.status and not uploads
         if uploads is None:
             pass
@@ -244,7 +272,8 @@ def correct(request, pk):
                 return redirect("detail", pk=pk)
             messages.success(request, "Correction enregistrée.")
             return redirect("detail", pk=pk)
-    return render(request, "journal/form.html", {"form": form, "mode": "correct", "current": current})
+    return render(request, "journal/form.html", {"form": form, "mode": "correct", "current": current,
+                                                 "element_groups": element_groups(form)})
 
 
 @login_required

@@ -32,7 +32,7 @@ class Base(TestCase):
         self.client.force_login(self.alice)
 
     def fiche(self, **overrides):
-        data = {"kind": "normal", "title": "Ouverture port 443 vers DMZ",
+        data = {"kind": "normal", "category": "config", "title": "Ouverture port 443 vers DMZ",
                 "occurred_at": timezone.localtime().strftime(FMT), "elements": [self.firewall.pk, self.vpn.pk],
                 "change": "Ajout règle 42", "reason": "Demande n° 1234", "impact": "Aucun",
                 "verification": "Test de connexion OK", "rollback": "Supprimer la règle 42",
@@ -352,7 +352,7 @@ class RollbackTests(Base):
         self.assertEqual(back.current.payload([])["rollback_of"], original.pk)
         self.assertContains(self.get(f"/fiches/{original.pk}/"), f"Retour arrière consigné le")
         self.assertContains(self.get(f"/fiches/{back.pk}/"), f"retour arrière de la <a href=\"/fiches/{original.pk}/\">")
-        self.assertContains(self.get("/"), "Retour arrière effectué")
+        self.assertContains(self.get("/"), "Rollback effectué")
         self.assertEqual(verify(), [])
 
     def test_pas_de_retour_arriere_sur_une_planifiee(self):
@@ -378,7 +378,7 @@ class SinceLastVisitTests(Base):
         self.assertEqual(titles, ["Fiche de Bob", "Fiche de Bob"])
         correction = home.context["unseen"][0]
         self.assertEqual((correction["label"], correction["sensitive"]), ("Correction", ["retour arrière"]))
-        self.assertContains(home, "retour arrière modifié")
+        self.assertContains(home, "Retour arrière modifié")
         self.assertContains(home, 'class="badge"')
         self.post("/nouveautes/lu/", {"upto": home.context["unseen_upto"]})
         home = self.get("/")
@@ -396,3 +396,87 @@ class SinceLastVisitTests(Base):
         self.client.force_login(self.alice)
         self.post("/nouveautes/lu/", {"upto": upto})
         self.assertEqual([i["version"].title for i in self.get("/").context["unseen"]], ["Arrivée pendant la lecture"])
+
+
+# --- 2.2 : interface ----------------------------------------------------------------------
+
+from datetime import date
+
+from .presenters import card, first_line, state_of
+
+
+class InterfaceTests(Base):
+    def test_filtrage_dynamique_renvoie_un_fragment(self):
+        self.post("/fiches/nouvelle/", self.fiche(title="Blocage NTLM via GPO", category="security"))
+        self.post("/fiches/nouvelle/", self.fiche(title="Mise à jour firmware", category="maintenance"))
+        fragment = self.get("/", q="ntlm", fragment="1")
+        self.assertNotContains(fragment, "<html")
+        self.assertContains(fragment, "Blocage NTLM via GPO")
+        self.assertNotContains(fragment, "Mise à jour firmware")
+        self.assertEqual(self.get("/", category="maintenance").context["page"].paginator.count, 1)
+        page = self.get("/")
+        self.assertContains(page, 'name="category" value="" id="id_category_0" checked', html=False)
+
+    def test_bloc_resume_et_encart_rollback(self):
+        self.post("/fiches/nouvelle/", self.fiche(
+            title="Blocage NTLM via GPO", before_state="NTLMv1/v2 autorisé\nautre ligne",
+            after_state="NTLM bloqué, Kerberos uniquement", impact="Risque sur les vieux applicatifs NTLM",
+            rollback="Délier la GPO SEC-Block-NTLM"))
+        page = self.get("/")
+        for text in ("Appliqué", "Impact à surveiller", "NTLMv1/v2 autorisé", "NTLM bloqué, Kerberos uniquement",
+                     "Délier la GPO SEC-Block-NTLM", "FW-01, VPN"):
+            self.assertContains(page, text)
+        self.assertNotContains(page, "autre ligne")
+
+    def test_aucun_impact_ne_declenche_pas_l_alerte_et_rollback_manquant_signale(self):
+        self.post("/fiches/nouvelle/", self.fiche(kind="urgent", impact="Aucun", rollback=""))
+        page = self.get("/")
+        self.assertNotContains(page, "Impact à surveiller")
+        self.assertContains(page, "Aucune procédure de retour arrière renseignée")
+        self.assertContains(page, "À compléter")
+
+    def test_detail_deploye_charge_a_la_demande(self):
+        self.post("/fiches/nouvelle/", self.fiche(verification="Authentification Kerberos testée"))
+        pk = Intervention.objects.get().pk
+        self.assertContains(self.get("/"), f'data-preview="/fiches/{pk}/apercu/"')
+        preview = self.get(f"/fiches/{pk}/apercu/")
+        self.assertContains(preview, "Procédure de retour arrière")
+        self.assertContains(preview, "Authentification Kerberos testée")
+        self.assertContains(preview, "Ouvrir la fiche complète")
+        self.assertNotContains(preview, "<html")
+
+    def test_etats(self):
+        past = (timezone.localtime() - timedelta(hours=1)).strftime(FMT)
+        future = (timezone.localtime() + timedelta(hours=1)).strftime(FMT)
+        self.post("/fiches/nouvelle/", self.fiche(kind="planned", occurred_at=future, title="plus tard"))
+        self.post("/fiches/nouvelle/", self.fiche(kind="planned", occurred_at=past, title="démarrée"))
+        states = {c["v"].title: c["state_label"] for c in self.get("/").context["cards"]}
+        self.assertEqual(states, {"plus tard": "Planifiée", "démarrée": "En cours"})
+        self.assertEqual(first_line("\n\n  première  \nseconde"), "première")
+
+    def test_absence_affichee_sur_les_fiches(self):
+        self.post("/fiches/nouvelle/", self.fiche())
+        self.post("/compte/absence/", {"away_until": (date.today() + timedelta(days=5)).isoformat()})
+        self.assertContains(self.get("/"), "Absent jusqu’au")
+        self.post("/compte/absence/", {"away_until": ""})
+        self.assertNotContains(self.get("/"), "Absent jusqu’au")
+        self.post("/compte/absence/", {"away_until": (date.today() - timedelta(days=1)).isoformat()})
+        self.assertNotContains(self.get("/"), "Absent jusqu’au")
+
+    def test_formulaire_elements_par_domaine_et_categorie_tracee(self):
+        Element.objects.create(name="DC01", kind=Element.EQUIPMENT, group="ad")
+        form = self.get("/fiches/nouvelle/")
+        groups = [g for g, _ in form.context["element_groups"]]
+        self.assertIn("AD / GPO", groups)
+        self.post("/fiches/nouvelle/", self.fiche(category="security"))
+        intervention = Intervention.objects.get()
+        self.assertEqual(intervention.current.payload([])["category"], "security")
+        self.post(f"/fiches/{intervention.pk}/corriger/", self.fiche(category="fix", note="requalifiée"))
+        self.assertContains(self.get(f"/fiches/{intervention.pk}/"), "Correctif")
+        self.assertEqual(verify(), [])
+
+    def test_csp_stricte_conservee(self):
+        csp = self.get("/")["Content-Security-Policy"]
+        self.assertIn("script-src 'self'", csp)
+        self.assertIn("style-src 'self'", csp)
+        self.assertNotIn("unsafe-inline", csp)

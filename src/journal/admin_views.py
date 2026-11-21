@@ -58,6 +58,8 @@ class UserEditForm(forms.Form):
     role = forms.ChoiceField(label="Rôle", choices=ROLES)
     totp_required = forms.BooleanField(label="TOTP obligatoire", required=False)
     is_active = forms.BooleanField(label="Compte actif", required=False)
+    away_until = forms.DateField(label="Absent jusqu’au", required=False, widget=forms.DateInput(attrs={"type": "date"}),
+                                 help_text="Affiché sur ses fiches : l’équipe sait qu’il faut s’appuyer sur la fiche.")
 
 
 @login_required
@@ -97,7 +99,7 @@ def user_edit(request, pk):
     profile = profile_of(account)
     form = UserEditForm(request.POST or None, initial={
         "first_name": account.first_name, "last_name": account.last_name, "role": role_of(account),
-        "totp_required": profile.totp_required, "is_active": account.is_active})
+        "totp_required": profile.totp_required, "is_active": account.is_active, "away_until": profile.away_until})
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         demoting = account.is_superuser and (data["role"] != "admin" or not data["is_active"])
@@ -108,8 +110,8 @@ def user_edit(request, pk):
             account.first_name, account.last_name, account.is_active = data["first_name"], data["last_name"], data["is_active"]
             account.save(update_fields=["first_name", "last_name", "is_active"])
             apply_role(account, data["role"])
-            profile.totp_required = data["totp_required"]
-            profile.save(update_fields=["totp_required"])
+            profile.totp_required, profile.away_until = data["totp_required"], data["away_until"]
+            profile.save(update_fields=["totp_required", "away_until"])
             after = {"rôle": data["role"], "actif": data["is_active"], "totp obligatoire": data["totp_required"]}
             changed = {k: {"avant": before[k], "après": after[k]} for k in before if before[k] != after[k]}
             chain.record_event("user_updated", actor=request.user, target=account.username, details=changed,
@@ -152,7 +154,7 @@ def user_reset_totp(request, pk):
 class ElementForm(forms.ModelForm):
     class Meta:
         model = Element
-        fields = ["name", "kind", "description"]
+        fields = ["name", "group", "kind", "description"]
 
 
 @login_required

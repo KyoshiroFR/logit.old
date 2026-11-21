@@ -3,9 +3,13 @@
 {% block content %}
 <div class="page-head">
   <div>
-    <p class="muted small"><a href="{% url 'home' %}">Registre</a> / Fiche n° {{ intervention.pk }}</p>
+    <p class="crumbs"><a href="{% url 'home' %}">Registre</a> / Fiche n° {{ intervention.pk }}{% if current.number > 1 %} · v{{ current.number }}{% endif %}</p>
     <h1>{{ current.title }}</h1>
-    {% include "journal/includes/tags.html" with v=current %}
+    <span class="tags"><span class="tag {{ card.state }}">{{ card.state_label }}</span>
+      {% if card.urgent %}<span class="tag urgent soft plain">Urgence</span>{% endif %}
+      {% if card.watch %}<span class="tag watch soft">Impact à surveiller</span>{% endif %}
+      {% if current.category %}<span class="tag soft plain">{{ current.get_category_display }}</span>{% endif %}
+      {% if card.author_away %}<span class="tag away soft">Intervenant absent jusqu’au {{ card.author_away|date:"d/m" }}</span>{% endif %}</span>
   </div>
   {% if can_write and current.status != 'cancelled' %}<div class="actions">
     {% if current.status == 'planned' %}<a class="button primary" href="{% url 'complete' intervention.pk %}">Marquer réalisée</a>{% endif %}
@@ -18,7 +22,7 @@
 {% if intervention.rollback_of_id %}<p class="notice">Cette fiche est le retour arrière de la <a href="{% url 'detail' intervention.rollback_of_id %}">fiche n° {{ intervention.rollback_of_id }}</a>.</p>{% endif %}
 {% for r, rv in rollbacks %}<p class="notice danger">Retour arrière consigné le {{ r.recorded_at|date:"d/m/Y à H:i" }} par {{ r.created_by }} : <a href="{% url 'detail' r.pk %}">fiche n° {{ r.pk }}</a>{% if rv.status == 'cancelled' %} (annulée){% elif rv.status == 'planned' %} (planifiée){% endif %}.</p>{% endfor %}
 {% if current.status == 'cancelled' %}<p class="notice danger">Fiche annulée le {{ current.recorded_at|date:"d/m/Y à H:i" }} par {{ current.author }} : {{ current.note }}</p>{% endif %}
-{% if current.incomplete %}<p class="notice warn">Fiche à compléter : {% if not current.reason %}motif, {% endif %}{% if not current.impact %}impact, {% endif %}{% if not current.verification %}vérifications, {% endif %}{% if not current.rollback %}retour arrière, {% endif %}à renseigner.</p>{% endif %}
+{% if current.incomplete %}<p class="notice warn">Fiche à compléter : {% if not current.reason %}motif, {% endif %}{% if not current.impact %}impact, {% endif %}{% if not current.rollback %}retour arrière, {% endif %}à renseigner.</p>{% endif %}
 {% if sensitive_corrected %}<p class="notice warn">L’impact ou le retour arrière de cette fiche a été corrigé. Consulte l’historique ci-dessous.</p>{% endif %}
 
 <div class="grid-2">
@@ -28,7 +32,7 @@
       <dt>{% if current.status == 'planned' %}Prévue le{% else %}Intervention{% endif %}</dt><dd class="when">{{ current.occurred_at|date:"l d F Y à H:i" }} <span class="muted small">(déclarée)</span></dd>
       <dt>Enregistrée</dt><dd class="when">{{ intervention.recorded_at|date:"l d F Y à H:i:s" }} <span class="muted small">(serveur, non modifiable)</span></dd>
       <dt>Par</dt><dd>{{ intervention.created_by.get_full_name|default:intervention.created_by.username }}</dd>
-      {% if first.late_entry %}<dt></dt><dd><span class="tag warn">Saisie a posteriori : {{ first.occurred_at|timesince:intervention.recorded_at }} après l’intervention</span></dd>{% endif %}
+      {% if first.late_entry %}<dt></dt><dd><span class="tag watch soft">Saisie a posteriori : {{ first.occurred_at|timesince:intervention.recorded_at }} après l’intervention</span></dd>{% endif %}
       {% if corrections %}<dt>Corrigée</dt><dd>{{ corrections|length }} fois, dernière le {{ corrections.0.version.recorded_at|date:"d/m/Y à H:i" }} par {{ corrections.0.version.author }}</dd>{% endif %}
     </dl>
   </section>
@@ -38,16 +42,12 @@
   </section>
 </div>
 
-<section class="card fiche-fields">
-  <h3>Modification</h3><div class="section-text">{{ current.change }}</div>
-  <h3>Motif</h3><div class="section-text">{{ current.reason|default:"" }}{% if not current.reason %}<span class="empty">Non renseigné</span>{% endif %}</div>
-  <h3>Impact</h3><div class="section-text">{{ current.impact|default:"" }}{% if not current.impact %}<span class="empty">Non renseigné</span>{% endif %}</div>
-  <h3>Vérifications</h3><div class="section-text">{{ current.verification|default:"" }}{% if not current.verification %}<span class="empty">Non renseigné</span>{% endif %}</div>
-</section>
-
-<section class="card rollback" id="retour-arriere">
-  <h2>Retour arrière</h2>
-  <div class="section-text">{{ current.rollback|default:"" }}{% if not current.rollback %}<span class="empty">Non renseigné</span>{% endif %}</div>
+<section class="blocks card-gap">
+  <div class="block"><h3>Ce qui a changé</h3><div class="section-text">{{ current.change }}</div></div>
+  <div class="block"><h3>Pourquoi</h3><div class="section-text">{{ current.reason|default:"" }}{% if not current.reason %}<span class="empty">Non renseigné</span>{% endif %}</div></div>
+  <div class="block"><h3>Impacts potentiels à surveiller</h3><div class="section-text">{{ current.impact|default:"" }}{% if not current.impact %}<span class="empty">Non renseigné</span>{% endif %}</div></div>
+  <div class="block rollback" id="retour-arriere"><h3>Procédure de retour arrière</h3><div class="section-text">{{ current.rollback|default:"" }}{% if not current.rollback %}<span class="empty">Non renseignée</span>{% endif %}</div></div>
+  {% if current.verification %}<div class="block wide"><h3>Vérifications effectuées</h3><div class="section-text">{{ current.verification }}</div></div>{% endif %}
 </section>
 
 {% if attachments %}<section class="card">

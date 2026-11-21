@@ -1,0 +1,38 @@
+{% with v=c.v %}
+<article class="entry" data-state="{{ c.state }}" id="fiche-{{ v.intervention_id }}">
+  <div class="entry-body">
+    <div class="entry-top">
+      <span class="tag {{ c.state }}">{{ c.state_label }}</span>
+      {% if c.urgent %}<span class="tag urgent soft plain">Urgence</span>{% endif %}
+      {% if c.watch %}<span class="tag watch soft">Impact à surveiller</span>{% endif %}
+      {% if v.category %}<span class="tag soft plain">{{ v.get_category_display }}</span>{% endif %}
+      <time class="entry-time" datetime="{{ v.occurred_at|date:'c' }}">{{ v.occurred_at|date:"D d/m/Y · H:i:s" }}</time>
+      <span class="entry-num">n° {{ v.intervention_id }}{% if v.number > 1 %} · v{{ v.number }}{% endif %}</span>
+    </div>
+    <a class="entry-title" href="{% url 'detail' v.intervention_id %}">{{ v.title }}</a>
+    <dl class="entry-grid">
+      <dt>Intervenant</dt>
+      <dd><span class="who">{{ c.author.get_full_name|default:c.author.username }}</span>
+        {% if c.author_away %}<span class="tag away soft" title="Absent : appuie-toi sur la fiche">Absent jusqu’au {{ c.author_away|date:"d/m" }}</span>{% endif %}</dd>
+      <dt>Résumé</dt>
+      <dd class="summary">
+        <span><b>Cible</b>{{ c.target }}</span>
+        {% if c.before %}<span class="before"><b>Avant</b>{{ c.before }}</span>{% endif %}
+        {% if c.after %}<span class="after"><b>Après</b>{{ c.after }}</span>{% endif %}
+      </dd>
+    </dl>
+    <div class="entry-foot">
+    {% if c.state == 'rolledback' %}
+      <div class="rollback-box done"><span class="icon" aria-hidden="true">↺</span><span class="text"><strong>Rollback effectué.</strong> Consulte la fiche de retour arrière liée.</span></div>
+    {% elif c.rollback_available %}
+      <div class="rollback-box"><span class="icon" aria-hidden="true">↺</span><span class="text"><strong>Rollback :</strong> {{ c.rollback }}</span></div>
+    {% elif c.state != 'cancelled' %}
+      <div class="rollback-box missing"><span class="icon" aria-hidden="true">!</span><span class="text"><strong>Aucune procédure de retour arrière renseignée.</strong></span></div>
+    {% else %}<div class="rollback-box"><span class="text muted">Fiche annulée{% if v.note %} : {{ v.note }}{% endif %}</span></div>
+    {% endif %}
+      <button type="button" class="toggle" data-preview="{% url 'preview' v.intervention_id %}" aria-expanded="false" aria-controls="detail-{{ v.intervention_id }}">Voir le détail </button>
+    </div>
+  </div>
+  <div class="entry-detail" id="detail-{{ v.intervention_id }}"><div><div class="detail-inner"><div class="skeleton"></div></div></div></div>
+</article>
+{% endwith %}

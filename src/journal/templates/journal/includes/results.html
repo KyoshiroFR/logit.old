@@ -1,0 +1,14 @@
+<div class="results-head">
+  <h2>{% if filters_active %}{{ page.paginator.count }} intervention{{ page.paginator.count|pluralize }} trouvée{{ page.paginator.count|pluralize }}{% else %}Dernières interventions{% endif %}</h2>
+  {% if page.paginator.count %}<span class="muted small">{{ page.start_index }}–{{ page.end_index }} sur {{ page.paginator.count }}</span>{% endif %}
+</div>
+{% if cards %}
+<div class="entries">{% for c in cards %}{% include "journal/includes/entry.html" %}{% endfor %}</div>
+{% if page.has_other_pages %}<nav class="pager" aria-label="Pages">
+  {% if page.has_previous %}<a class="button" href="?{% if query %}{{ query }}&amp;{% endif %}page={{ page.previous_page_number }}">← Plus récentes</a>{% endif %}
+  <span class="muted small">Page {{ page.number }} / {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a class="button" href="?{% if query %}{{ query }}&amp;{% endif %}page={{ page.next_page_number }}">Plus anciennes →</a>{% endif %}
+</nav>{% endif %}
+{% else %}
+<p class="empty-state">{% if filters_active %}Aucune intervention ne correspond à ces critères.{% else %}Aucune intervention enregistrée pour l’instant.{% endif %}</p>
+{% endif %}
