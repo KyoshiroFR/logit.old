@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installateur LogIT : une commande sur Debian 12 ou 13, installation complète sur base vierge.
+# Installateur LogIT : une commande sur Debian 12 ou 13. Installe LogIT, ou le met à jour s’il est déjà installé.
 #
 #   bash -c "$(curl -fsSL https://raw.githubusercontent.com/KyoshiroFR/logit/main/install.sh)"
 #
