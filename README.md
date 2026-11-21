@@ -35,7 +35,8 @@ Il analyse le serveur et s’adapte :
 | **Caddy** (système) | ajoute un fichier importé, sauvegarde le Caddyfile d’origine, valide puis recharge |
 | un autre service sur 80/443 | fait écouter LogIT en local et t’indique la route à ajouter dans ton proxy |
 | un pare-feu ufw actif | t’indique la règle à ajouter (il ne modifie pas tes règles) |
-| LogIT déjà installé | ne modifie rien |
+| LogIT déjà installé et à jour | ne modifie rien |
+| LogIT déjà installé, version plus ancienne | le met à jour (voir « Mise à jour ») |
 
 Si un reverse proxy refuse la configuration, l’installateur la retire et le proxy reste dans son état d’origine.
 
@@ -68,9 +69,17 @@ logit ca                certificat à importer sur les postes pour éviter l’a
 
 ## Mise à jour
 
+La commande d’installation sert aussi à mettre à jour : relancée sur un serveur où LogIT tourne, elle met à jour vers la version qu’elle publie.
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/KyoshiroFR/logit/main/install.sh)"
+```
+
+La commande `logit` fait la même chose :
+
 ```bash
 sudo logit update            # dernière version publiée
-sudo logit update v2.1.0     # une version précise
+sudo logit update v0.1.1     # une version précise
 ```
 
 Dans l’ordre : sauvegarde de la base, récupération du code, construction de l’image, redémarrage avec les migrations, puis contrôle de santé et d’intégrité.
@@ -79,11 +88,6 @@ Dans l’ordre : sauvegarde de la base, récupération du code, construction de 
 - Un retour à une version plus ancienne est refusé : les migrations de base ne se défont pas. On passe alors par `logit restore`.
 - Chaque mise à jour, réussie ou annulée, est inscrite dans le journal de sécurité.
 
-Une installation en 2.0, dont la commande `logit` ne connaît pas encore `update`, se met à jour une première fois avec la commande de la nouvelle version :
-
-```bash
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/KyoshiroFR/logit/main/deploy/logit)" logit update
-```
 
 ## Fonctionnement
 
@@ -104,7 +108,11 @@ sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/KyoshiroFR/logit/ma
 - **Saisie** : identification (catégorie, déroulement, éléments par domaine), puis 4 blocs courts : ce qui a changé, pourquoi, impacts potentiels, procédure de retour arrière. Les détails techniques sont repliés.
 - **Absence** : chacun indique ses congés dans « Mon compte » (ou un admin le fait). Ses fiches affichent alors « Absent jusqu’au … ».
 
+- **Signaler un bug** : le bouton en haut à droite, présent sur chaque page, ouvre un formulaire (titre, description, type, priorité, navigateur détecté, capture par clic, glisser-déposer ou Ctrl+V). Les administrateurs suivent les signalements dans « Bugs » (nouveau, en cours, résolu) et peuvent préparer une issue GitHub publique, sans la capture ni la page concernée.
+
 ![Détail déployé d’une intervention](docs/images/detail-deploye.png)
+
+![Signaler un bug](docs/images/signaler-un-bug.png)
 
 ### Les rôles
 
@@ -141,5 +149,9 @@ Les tests demandent un PostgreSQL réel, car ils vérifient les protections de l
 
 ## Publier une version
 
-1. Créer le tag (`git tag v2.0.0 && git push origin v2.0.0`).
-2. Sur `main`, renseigner dans `install.sh` `LOGIT_DEFAULT_REF` (le tag) et `LOGIT_DEFAULT_COMMIT` (`git rev-parse v2.0.0`). L’installateur refusera tout code dont le commit ne correspond pas.
+Numérotation `v0.MINEUR.CORRECTIF` jusqu’à la mise en production, qui sera la `v1.0.0` :
+- un ajout de fonction incrémente le mineur : `v0.1.0` → `v0.2.0` ;
+- une correction incrémente le correctif : `v0.1.0` → `v0.1.1`.
+
+1. Créer le tag (`git tag v0.1.0 && git push origin v0.1.0`).
+2. Sur `main`, renseigner dans `install.sh` `LOGIT_DEFAULT_REF` (le tag) et `LOGIT_DEFAULT_COMMIT` (`git rev-parse v0.1.0`). L’installateur refusera tout code dont le commit ne correspond pas.

@@ -1,0 +1,28 @@
+{% extends "journal/base.html" %}
+{% block title %}Bug n° {{ bug.pk }}{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <p class="crumbs"><a href="{% url 'bug_list' %}">Bugs signalés</a> / n° {{ bug.pk }}</p>
+  <h1>{{ bug.title }}</h1>
+  <span class="tags"><span class="tag soft {% if bug.priority == 'high' %}rolledback{% elif bug.priority == 'medium' %}watch{% else %}applied{% endif %}">Priorité {{ bug.get_priority_display|lower }}</span><span class="tag soft plain">{{ bug.get_bug_type_display }}</span></span>
+</div>
+<a class="button" href="{{ github_url }}" target="_blank" rel="noopener noreferrer">Préparer une issue GitHub ↗</a></div>
+<div class="grid-2">
+  <section class="card"><h2>Signalement</h2>
+    <dl class="facts">
+      <dt>Par</dt><dd>{{ bug.reporter.get_full_name|default:bug.reporter.username }}</dd>
+      <dt>Le</dt><dd>{{ bug.recorded_at|date:"d/m/Y à H:i" }}</dd>
+      <dt>Page</dt><dd>{% if bug.page %}<code>{{ bug.page }}</code>{% else %}—{% endif %}</dd>
+      <dt>Navigateur</dt><dd>{{ bug.environment|default:"—" }}</dd>
+      <dt>Version</dt><dd>{{ bug.version|default:"—" }}</dd>
+    </dl>
+    <h3 class="sub">Description</h3><div class="section-text">{{ bug.description }}</div>
+    {% if bug.screenshot_name %}<h3 class="sub">Capture</h3><a href="{% url 'bug_screenshot' bug.pk %}" target="_blank" rel="noopener" class="gallery single"><figure><img src="{% url 'bug_screenshot' bug.pk %}" alt="Capture jointe"></figure></a>{% endif %}
+  </section>
+  <form method="post" class="card" novalidate>{% csrf_token %}<h2>Suivi</h2>
+    {% for field in form %}{% include "journal/includes/field.html" %}{% endfor %}
+    <button type="submit" class="primary">Enregistrer</button>
+    <p class="muted small">« Préparer une issue GitHub » ouvre un brouillon public sans la capture. Relis-le pour retirer toute information interne avant de le publier.</p>
+  </form>
+</div>
+{% endblock %}

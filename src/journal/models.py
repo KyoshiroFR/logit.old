@@ -195,3 +195,31 @@ class AuditEvent(models.Model):
 
     def compute_hash(self):
         return canonical_hash(self.prev_hash, self.payload())
+
+
+class BugReport(models.Model):
+    """Signalement d'un bug de LogIT par un utilisateur. Modifiable (statut, note) : ce n'est pas une trace."""
+
+    TYPES = [("ui", "Interface"), ("function", "Fonctionnement"), ("performance", "Performance"), ("other", "Autre")]
+    PRIORITIES = [("low", "Basse"), ("medium", "Moyenne"), ("high", "Haute")]
+    NEW, IN_PROGRESS, RESOLVED, WONTFIX = "new", "in_progress", "resolved", "wontfix"
+    STATUSES = [(NEW, "Nouveau"), (IN_PROGRESS, "En cours"), (RESOLVED, "Résolu"), (WONTFIX, "Ne sera pas corrigé")]
+
+    reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="bug_reports")
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    title = models.CharField("titre", max_length=160)
+    description = models.TextField("description")
+    bug_type = models.CharField("type", max_length=12, choices=TYPES, default="ui")
+    priority = models.CharField("priorité", max_length=8, choices=PRIORITIES, default="low")
+    environment = models.CharField("navigateur / appareil", max_length=160, blank=True)
+    page = models.CharField("page concernée", max_length=300, blank=True)
+    version = models.CharField("version de LogIT", max_length=60, blank=True)
+    status = models.CharField("statut", max_length=12, choices=STATUSES, default=NEW)
+    admin_note = models.TextField("note de suivi", blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    screenshot_name = models.CharField(max_length=200, blank=True)
+    screenshot_type = models.CharField(max_length=20, blank=True)
+    screenshot = models.BinaryField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-pk"]

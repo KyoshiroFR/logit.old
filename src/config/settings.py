@@ -116,6 +116,11 @@ X_FRAME_OPTIONS = "DENY"
 # Verrouillage : 5 échecs consécutifs bloquent le compte 15 minutes.
 LOGIT_LOCKOUT_ATTEMPTS = 5
 LOGIT_LOCKOUT_MINUTES = 15
+LOGIT_VERSION = os.environ.get("LOGIT_VERSION", "dev")
+LOGIT_REPOSITORY = "https://github.com/KyoshiroFR/logit"
+# Signalements de bug : au plus 20 par personne et par heure.
+LOGIT_BUG_REPORTS_PER_HOUR = 20
+
 # Écart au-delà duquel une fiche est signalée « saisie a posteriori ».
 LOGIT_LATE_ENTRY_MINUTES = 15
 

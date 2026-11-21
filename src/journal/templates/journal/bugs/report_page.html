@@ -1,0 +1,11 @@
+{% extends "journal/base.html" %}
+{% block title %}Signaler un bug{% endblock %}
+{% block content %}
+<div class="bug-page">
+  <form method="post" action="{% url 'bug_report' %}" enctype="multipart/form-data" class="bug-form card" novalidate>
+    <header class="bug-head"><span class="bug-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9h8v6a4 4 0 0 1-8 0V9z"/><path d="M9 9V7a3 3 0 0 1 6 0v2M4 13h4M16 13h4M5 8l3 2M19 8l-3 2M5 19l3-2M19 19l-3-2M12 11v7"/></svg></span>
+      <div><h1>Signaler un bug</h1><p class="muted small">Aide-nous à améliorer LogIT.</p></div></header>
+    <div class="bug-body">{% include "journal/bugs/form_fields.html" %}</div>
+  </form>
+</div>
+{% endblock %}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installateur LogIT : une commande sur Debian 12 ou 13, installation complète sur base vierge.
+# Installateur LogIT : une commande sur Debian 12 ou 13. Installe LogIT, ou le met à jour s’il est déjà installé.
 #
 #   bash -c "$(curl -fsSL https://raw.githubusercontent.com/KyoshiroFR/logit/main/install.sh)"
 #
@@ -17,7 +17,7 @@ set -Eeuo pipefail
 umask 027
 
 LOGIT_REPO="https://github.com/KyoshiroFR/logit.git"
-LOGIT_DEFAULT_REF="v2.2-interface"  # branche de test ; passera au tag lors de la publication
+LOGIT_DEFAULT_REF="v2.3-bugs"  # branche de test ; passera au tag lors de la publication
 # Empreinte Git du commit de la version : renseignée lors de la publication d'une version.
 LOGIT_DEFAULT_COMMIT=""
 
@@ -129,9 +129,23 @@ if [[ -f $DIR/.env ]]; then
         remove_incomplete
         ok "Installation interrompue supprimée"
     elif command -v docker >/dev/null && [[ -n $(compose ps --status running -q app 2>/dev/null) ]]; then
-        ok "LogIT fonctionne déjà. Aucune modification effectuée."
-        info "Mise à jour : logit update   ·   État : logit status   ·   Sauvegarde : logit backup"
-        exit 0
+        # Installation en service : la même commande la met à jour, avec la procédure de « logit update »
+        # (sauvegarde, construction, migrations, intégrité, retour automatique en cas d'échec).
+        # La procédure est prise dans la version cible, pas dans la commande « logit » déjà installée.
+        ok "LogIT est déjà installé : mise à jour vers $REF"
+        (umask 022 && git -C "$DIR" fetch --quiet --depth 1 origin "$REF") >>"$LOG" 2>&1 || fail "impossible de récupérer $REF depuis $LOGIT_REPO."
+        NEW_COMMIT=$(git -C "$DIR" rev-parse FETCH_HEAD)
+        if [[ $REF == "$LOGIT_DEFAULT_REF" && -n $LOGIT_DEFAULT_COMMIT && $NEW_COMMIT != "$LOGIT_DEFAULT_COMMIT" ]]; then
+            fail "le commit de $REF ($NEW_COMMIT) ne correspond pas à l’empreinte attendue. Rien n’a été modifié."
+        fi
+        UPDATER=$(mktemp)
+        git -C "$DIR" show "$NEW_COMMIT:deploy/logit" >"$UPDATER" || { rm -f "$UPDATER"; fail "procédure de mise à jour introuvable dans $REF."; }
+        sed -i "s|^LOGIT_DIR=.*|LOGIT_DIR=$DIR|" "$UPDATER"
+        UPDATE_ARGS=(update "$REF"); [[ $ASSUME_YES == 1 ]] && UPDATE_ARGS+=(--yes)
+        trap - ERR
+        RC=0; bash "$UPDATER" "${UPDATE_ARGS[@]}" || RC=$?
+        rm -f "$UPDATER"
+        exit "$RC"
     else
         fail "LogIT est installé dans $DIR mais n’est pas démarré. Lance « logit start », ou consulte « logit logs »."
     fi
